@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, usePermissions } from '@/lib/AuthContext';
@@ -104,7 +104,7 @@ function Sidebar({ open, onClose }) {
         }} className="sidebar-backdrop" />
       )}
 
-      <aside className={`sidebar${open ? ' sidebar-open' : ''}`}>
+      <aside className={`sidebar${open ? ' sidebar-open' : ''}`} suppressHydrationWarning>
         {/* Brand */}
         <div style={{ padding: '1.125rem 1rem 1rem', borderBottom: '1px solid var(--sidebar-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -241,7 +241,7 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="app-layout">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Suspense fallback={null}><Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} /></Suspense>
       <main className="main-content">
         {/* Mobile top bar */}
         <div className="mobile-topbar">

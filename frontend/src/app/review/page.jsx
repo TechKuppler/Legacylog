@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import {
@@ -648,6 +648,14 @@ function ExperienceList({ experiences, onSelect }) {
 
 // ─── Review Page ──────────────────────────────────────────────────────────────
 export default function ReviewPage() {
+  return (
+    <Suspense fallback={null}>
+      <ReviewContent />
+    </Suspense>
+  );
+}
+
+function ReviewContent() {
   const { getToken } = useAuth();
   const searchParams = useSearchParams();
   const router       = useRouter();
