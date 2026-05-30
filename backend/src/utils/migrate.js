@@ -11,7 +11,7 @@ const DB_USER     = process.env.DB_USER     || 'postgres';
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_NAME     = process.env.DB_NAME     || 'legacylog';
 
-const SCHEMA_PATH = path.resolve(__dirname, '../../../database/schema.sql');
+const SCHEMA_PATH = path.resolve(__dirname, '../../database/schema.sql');
 
 const run = async () => {
   // ── Step 1: Create database if it doesn't exist ───────────────────────────
