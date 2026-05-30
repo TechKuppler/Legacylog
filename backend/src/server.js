@@ -14,7 +14,17 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
-  origin:      FRONTEND_URL,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    // Allow localhost for local dev
+    if (origin.includes('localhost')) return callback(null, true);
+    // Allow any Vercel deployment URL
+    if (origin.includes('vercel.app')) return callback(null, true);
+    // Allow the configured FRONTEND_URL
+    if (origin === FRONTEND_URL) return callback(null, true);
+    callback(null, true); // allow all for internal tool
+  },
   credentials: true,
 }));
 app.use(express.json());
