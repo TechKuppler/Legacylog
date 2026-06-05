@@ -171,7 +171,7 @@ export default function CapturePage() {
 
   return (
     <AppLayout>
-      <div style={{ maxWidth: '760px' }}>
+      <div style={{ maxWidth: '760px', width: '100%' }}>
         {/* Header */}
         <div className="page-header">
           <h1 className="page-title">Capture Experience</h1>
@@ -192,7 +192,7 @@ export default function CapturePage() {
           )}
 
           {/* ── Source Row: Upload | Record ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start' }}>
+          <div className="source-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start' }}>
 
             {/* Upload Panel */}
             <div>
@@ -269,10 +269,10 @@ export default function CapturePage() {
                 ) : (
                   <>
                     <div style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '2rem', fontWeight: 500, lineHeight: 1,
+                      fontFamily: "'Open Sans', sans-serif",
+                      fontSize: '2rem', fontWeight: 800, lineHeight: 1,
                       color: recState === REC.RECORDING ? 'var(--error)' : 'var(--text-3)',
-                      letterSpacing: '0.05em',
+                      letterSpacing: '-0.02em',
                     }}>
                       {formatTime(elapsed)}
                     </div>

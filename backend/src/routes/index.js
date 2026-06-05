@@ -41,7 +41,7 @@ router.put   ('/users/:id/tags',              requireAuth, requireAdmin, setUser
 router.get   ('/departments',     requireAuth,              listDepartments);
 router.post  ('/departments',     requireAuth, requireAdmin, createDepartment);
 router.patch ('/departments/:id', requireAuth, requireAdmin, updateDepartment);
-router.delete('/departments/:id', requireAuth, requireAdmin, deleteDepartment);
+router.delete('/departments/:id', requireAuth, requireAdmin, deleteDepartment);   
 
 // ─── Tags ─────────────────────────────────────────────────────────────────────
 router.get   ('/tags',     requireAuth, listTags);
