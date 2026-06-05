@@ -14,11 +14,10 @@ function Avatar({ name, size = '1.875rem', fontSize = '0.7rem' }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+      background: 'linear-gradient(135deg, #E03228, #B82520)',
       color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize, fontWeight: 700, flexShrink: 0,
-      boxShadow: '0 0 10px rgba(59,130,246,0.35)',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "'Open Sans', sans-serif",
     }}>{initials}</div>
   );
 }
@@ -29,18 +28,17 @@ function NavItem({ href, label, icon, active, onClick }) {
     <Link href={href} onClick={onClick} style={{
       display: 'flex', alignItems: 'center', gap: '0.625rem',
       padding: '0.45rem 0.625rem', borderRadius: 'var(--r-md)',
-      fontSize: '0.8125rem', fontWeight: active ? 600 : 500,
+      fontSize: '0.8125rem', fontWeight: active ? 600 : 400,
       color: active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text)',
       background: active ? 'var(--sidebar-active-bg)' : 'transparent',
       textDecoration: 'none', marginBottom: '0.125rem',
       borderLeft: active ? '2px solid var(--brand)' : '2px solid transparent',
-      boxShadow: active ? '0 0 12px rgba(59,130,246,0.15)' : 'none',
       transition: 'all 0.15s',
     }}
-    onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; e.currentTarget.style.color = 'var(--sidebar-text-hover)'; e.currentTarget.style.borderLeftColor = 'rgba(59,130,246,0.3)'; } }}
+    onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; e.currentTarget.style.color = 'var(--sidebar-text-hover)'; e.currentTarget.style.borderLeftColor = 'rgba(224,50,40,0.3)'; } }}
     onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; e.currentTarget.style.borderLeftColor = 'transparent'; } }}
     >
-      <span style={{ fontSize: '0.9rem', width: '1.1rem', textAlign: 'center', opacity: active ? 1 : 0.7 }}>{icon}</span>
+      <span style={{ fontSize: '0.85rem', width: '1.1rem', textAlign: 'center', opacity: active ? 1 : 0.6 }}>{icon}</span>
       <span>{label}</span>
     </Link>
   );
@@ -100,7 +98,7 @@ function Sidebar({ open, onClose }) {
       {open && (
         <div onClick={onClose} style={{
           position: 'fixed', inset: 0, zIndex: 99,
-          background: 'rgba(0,0,0,0.55)',
+          background: 'rgba(0,0,0,0.6)',
         }} className="sidebar-backdrop" />
       )}
 
@@ -109,19 +107,21 @@ function Sidebar({ open, onClose }) {
         <div style={{ padding: '1.125rem 1rem 1rem', borderBottom: '1px solid var(--sidebar-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{
-              fontFamily: 'DM Serif Display, serif', fontSize: '1.15rem', fontWeight: 400, letterSpacing: '-0.01em',
-              background: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              fontFamily: "'Open Sans', sans-serif",
+              fontSize: '1.1rem',
+              fontWeight: 800,
+              letterSpacing: '-0.03em',
+              color: 'var(--text-1)',
             }}>LegacyLog</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--sidebar-text)', marginTop: '0.15rem' }}>Kuppler Knowledge Base</div>
+            <div style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', marginTop: '0.15rem', letterSpacing: '0.02em', fontWeight: 400 }}>Kuppler Knowledge Base</div>
           </div>
           {/* Close button — mobile only */}
-          <button onClick={onClose} className="sidebar-close-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sidebar-text)', fontSize: '1.1rem', display: 'none' }}>✕</button>
+          <button onClick={onClose} className="sidebar-close-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sidebar-text)', fontSize: '1rem', display: 'none' }}>✕</button>
         </div>
 
         {/* Nav */}
         <nav style={{ padding: '0.5rem', flexShrink: 0 }}>
-          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.75rem 0.625rem 0.4rem', fontFamily: "'JetBrains Mono', monospace" }}>
+          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.75rem 0.625rem 0.4rem' }}>
             Menu
           </div>
           {NAV_ITEMS.map(({ href, label, icon, divider }) => {
@@ -137,7 +137,7 @@ function Sidebar({ open, onClose }) {
 
         {/* Experiences + tag filter */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.5rem', borderTop: '1px solid var(--sidebar-border)' }}>
-          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.75rem 0.625rem 0.4rem', fontFamily: "'JetBrains Mono', monospace" }}>
+          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.75rem 0.625rem 0.4rem' }}>
             Experiences
           </div>
 
@@ -146,16 +146,16 @@ function Sidebar({ open, onClose }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', padding: '0 0.25rem 0.5rem' }}>
               {allTags.slice(0, 8).map((t) => (
                 <button key={t.id} onClick={() => setActiveTagId(activeTagId === t.id ? null : t.id)} style={{
-                  padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.65rem',
-                  background: activeTagId === t.id ? 'rgba(59,130,246,0.2)' : 'transparent',
-                  color: activeTagId === t.id ? '#58a6ff' : 'var(--sidebar-text)',
-                  border: `1px solid ${activeTagId === t.id ? 'rgba(59,130,246,0.4)' : 'var(--sidebar-border)'}`,
+                  padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.63rem',
+                  background: activeTagId === t.id ? 'rgba(224,50,40,0.15)' : 'transparent',
+                  color: activeTagId === t.id ? '#F04039' : 'var(--sidebar-text)',
+                  border: `1px solid ${activeTagId === t.id ? 'rgba(224,50,40,0.35)' : 'var(--sidebar-border)'}`,
                   cursor: 'pointer', fontWeight: activeTagId === t.id ? 600 : 400,
-                  transition: 'all 0.15s',
+                  transition: 'all 0.15s', fontFamily: 'inherit',
                 }}>{t.name}</button>
               ))}
               {activeTagId && (
-                <button onClick={() => setActiveTagId(null)} style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: '0.1rem 0.25rem' }}>
+                <button onClick={() => setActiveTagId(null)} style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: '0.1rem 0.25rem', fontFamily: 'inherit' }}>
                   clear
                 </button>
               )}
@@ -176,13 +176,12 @@ function Sidebar({ open, onClose }) {
                 background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
                 border: 'none', cursor: 'pointer', textAlign: 'left',
                 borderLeft: isActive ? '2px solid var(--brand)' : '2px solid transparent',
-                boxShadow: isActive ? '0 0 10px rgba(59,130,246,0.12)' : 'none',
-                marginBottom: '0.1rem', transition: 'all 0.12s',
+                marginBottom: '0.1rem', transition: 'all 0.12s', fontFamily: 'inherit',
               }}
-              onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; e.currentTarget.style.borderLeftColor = 'rgba(59,130,246,0.25)'; } }}
+              onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; e.currentTarget.style.borderLeftColor = 'rgba(224,50,40,0.25)'; } }}
               onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderLeftColor = 'transparent'; } }}
               >
-                <span style={{ fontSize: '0.75rem', flexShrink: 0, opacity: 0.7 }}>{TYPE_ICON[exp.type] || '📄'}</span>
+                <span style={{ fontSize: '0.75rem', flexShrink: 0, opacity: 0.6 }}>{TYPE_ICON[exp.type] || '📄'}</span>
                 <span style={{ fontSize: '0.77rem', fontWeight: 500, color: isActive ? 'var(--sidebar-active-text)' : 'var(--sidebar-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {exp.title}
                 </span>
@@ -196,17 +195,17 @@ function Sidebar({ open, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem', padding: '0 0.125rem' }}>
             <Avatar name={user?.name} />
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e6edf3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace" }}>{user?.role}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+              <div style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>{user?.role}</div>
             </div>
           </div>
           <button onClick={handleLogout} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
             padding: '0.4rem 0.625rem', borderRadius: 'var(--r-md)',
             background: 'transparent', border: '1px solid transparent', cursor: 'pointer',
-            fontSize: '0.77rem', color: 'var(--sidebar-text)', transition: 'all 0.15s',
+            fontSize: '0.77rem', color: 'var(--sidebar-text)', transition: 'all 0.15s', fontFamily: 'inherit',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(248,81,73,0.08)'; e.currentTarget.style.color = '#f85149'; e.currentTarget.style.borderColor = 'rgba(248,81,73,0.2)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(224,50,40,0.08)'; e.currentTarget.style.color = '#F04039'; e.currentTarget.style.borderColor = 'rgba(224,50,40,0.2)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; e.currentTarget.style.borderColor = 'transparent'; }}
           >
             <span style={{ fontSize: '0.85rem' }}>↩</span><span>Sign out</span>
@@ -245,19 +244,19 @@ export default function AppLayout({ children }) {
       <main className="main-content">
         {/* Mobile top bar */}
         <div className="mobile-topbar">
-          <button onClick={() => setSidebarOpen(true)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-2)', fontSize: '1.2rem', padding: '0.25rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>☰</button>
-          <span style={{
-            fontFamily: 'DM Serif Display, serif', fontSize: '1rem',
-            background: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>LegacyLog</span>
-          <div style={{ width: '1.75rem' }} />
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.5rem', height: '2.5rem', borderRadius: 'var(--r-md)' }}
+            aria-label="Open menu"
+          >☰</button>
+          <span style={{ fontFamily: "'Open Sans', sans-serif", fontSize: '1.0625rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-1)' }}>
+            LegacyLog
+          </span>
+          <div style={{ width: '2.5rem' }} />
         </div>
-        {children}
+        <div className="page-wrap">
+          {children}
+        </div>
       </main>
     </div>
   );

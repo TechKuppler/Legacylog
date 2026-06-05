@@ -36,13 +36,11 @@ async function submitTranscription(audioUrl, languageHint) {
 
   const body = {
     audio_url:          audioUrl,
-    auto_chapters:      true,
+    auto_chapters:      true,   // provides per-chapter gist/headline/summary
     auto_highlights:    true,
     entity_detection:   true,
     sentiment_analysis: true,
-    summarization:      true,
-    summary_model:      'informative',
-    summary_type:       'bullets',
+    // summarization is mutually exclusive with auto_chapters — omitted
   };
 
   if (useDetection) {

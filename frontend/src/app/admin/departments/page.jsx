@@ -38,9 +38,9 @@ function DeptDrawer({ mode, initial, allTags, onSave, onClose, getToken }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
-      <div style={{ width: '400px', background: 'var(--surface)', borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <div className="drawer-panel" style={{ width: '400px', background: 'var(--surface)', borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '1.1rem' }}>
+          <h2 style={{ fontFamily: "'Open Sans', sans-serif", fontWeight: 700, fontSize: '1.1rem' }}>
             {isEdit ? 'Edit Department' : 'New Department'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '1.1rem' }}>✕</button>
@@ -138,7 +138,7 @@ export default function AdminDepartmentsPage() {
           <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>✕</button>
         </div>
       )}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-xs)' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-2xl)', overflow: 'hidden', boxShadow: 'var(--shadow-xs)' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner dark /></div>
         ) : (

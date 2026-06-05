@@ -51,12 +51,12 @@ function AudioPlayer({ src, token }) {
           border: 'none', cursor: blobUrl ? 'pointer' : 'default',
           color: '#fff', fontSize: '0.875rem',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: blobUrl ? '0 0 10px rgba(59,130,246,0.4)' : 'none',
+          boxShadow: blobUrl ? '0 0 8px rgba(224,50,40,0.35)' : 'none',
         }}>
           {!blobUrl ? <span className="spinner" style={{ width: '0.8rem', height: '0.8rem' }} />
           : playing ? '⏸' : '▶'}
         </button>
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-2)', minWidth: '4.5rem', fontFamily: "'JetBrains Mono', monospace" }}>
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-2)', minWidth: '4.5rem', fontWeight: 600 }}>
           {formatTime(current)} / {formatTime(duration)}
         </span>
         <input type="range" className="seek-bar" min={0} max={duration || 100} step={0.1} value={current}
@@ -114,12 +114,12 @@ function AssemblyReport({ job }) {
         {/* Confidence + Duration badges */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 1rem', flexShrink: 0 }}>
           {job.confidence != null && (
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', fontFamily: "'JetBrains Mono', monospace" }}>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.03em' }}>
               {Math.round(job.confidence * 100)}% conf.
             </span>
           )}
           {job.audio_duration && (
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', fontFamily: "'JetBrains Mono', monospace" }}>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', fontWeight: 600 }}>
               {formatTime(job.audio_duration)}
             </span>
           )}
@@ -146,7 +146,7 @@ function AssemblyReport({ job }) {
             {chapters.map((c, i) => (
               <div key={i} style={{ borderLeft: '3px solid var(--brand)', paddingLeft: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.3rem' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--brand-hover)', fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--brand-hover)', fontWeight: 600, letterSpacing: '0.02em' }}>
                     {msToTime(c.start)} – {msToTime(c.end)}
                   </span>
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-1)' }}>{c.headline}</span>
@@ -164,9 +164,9 @@ function AssemblyReport({ job }) {
             {phrases.map((p, i) => (
               <span key={i} style={{
                 padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.78rem',
-                background: `rgba(59,130,246,${Math.max(0.08, p.rank * 0.2)})`,
-                color: '#58a6ff',
-                border: '1px solid rgba(59,130,246,0.25)',
+                background: `rgba(224,50,40,${Math.max(0.08, p.rank * 0.18)})`,
+                color: '#F04039',
+                border: '1px solid rgba(224,50,40,0.22)',
                 fontWeight: p.rank > 0.7 ? 600 : 400,
               }}>
                 {p.text}
@@ -184,7 +184,7 @@ function AssemblyReport({ job }) {
               if (!group.length) return null;
               return (
                 <div key={type}>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem', fontWeight: 700 }}>
                     {type.replace('_', ' ')}
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
@@ -209,7 +209,7 @@ function AssemblyReport({ job }) {
                 <div key={label} style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                     <span style={{ fontSize: '0.7rem', color }}>{label}</span>
-                    <span style={{ fontSize: '0.7rem', color, fontFamily: "'JetBrains Mono', monospace" }}>{pct}%</span>
+                    <span style={{ fontSize: '0.7rem', color, fontWeight: 700 }}>{pct}%</span>
                   </div>
                   <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-3)' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s' }} />
@@ -221,7 +221,7 @@ function AssemblyReport({ job }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '300px', overflowY: 'auto' }}>
               {sentences.map((s, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: '9999px', background: `${sentColor(s.sentiment)}20`, color: sentColor(s.sentiment), fontWeight: 700, flexShrink: 0, marginTop: '0.1rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: '9999px', background: `${sentColor(s.sentiment)}20`, color: sentColor(s.sentiment), fontWeight: 700, flexShrink: 0, marginTop: '0.1rem', letterSpacing: '0.04em' }}>
                     {s.sentiment[0]}
                   </span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-2)', lineHeight: 1.6 }}>{s.text}</span>
@@ -299,7 +299,7 @@ function TranscriptPanel({ experienceId, initialJob, token }) {
 }
 
 // ─── Notes Panel ──────────────────────────────────────────────────────────────
-function NotesPanel({ experienceId, token, userName }) {
+function NotesPanel({ experienceId, token }) {
   const [notes,   setNotes]   = useState([]);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -344,10 +344,11 @@ function NotesPanel({ experienceId, token, userName }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--brand-hover)' }}>{n.author_name}</span>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 500 }}>
                     {formatDate(n.created_at)}
                   </span>
-                  <button onClick={() => handleDelete(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '0.75rem', padding: '0 0.2rem', lineHeight: 1 }}
+                  <button onClick={() => handleDelete(n.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '0.75rem', padding: '0 0.2rem', lineHeight: 1 }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--error)')}
                     onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-3)')}>✕</button>
                 </div>
@@ -428,8 +429,8 @@ function EditPanel({ experience, token, onSaved }) {
         padding: '0.75rem 1.125rem', background: 'none', border: 'none', cursor: 'pointer',
         borderBottom: open ? '1px solid var(--border)' : 'none',
       }}>
-        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-1)', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-          ✏ Edit / Add Content
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Edit / Add Content
         </span>
         <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>{open ? '▲' : '▼'}</span>
       </button>
@@ -455,9 +456,9 @@ function EditPanel({ experience, token, onSaved }) {
                     return (
                       <button key={t.id} type="button" onClick={() => toggleTag(t.id)} style={{
                         padding: '0.2rem 0.65rem', borderRadius: '9999px', fontSize: '0.75rem', cursor: 'pointer',
-                        background: active ? 'rgba(59,130,246,0.22)' : 'var(--surface-2)',
-                        color: active ? '#58a6ff' : 'var(--text-3)',
-                        border: `1px solid ${active ? 'rgba(59,130,246,0.45)' : 'var(--border)'}`,
+                        background: active ? 'rgba(224,50,40,0.12)' : 'var(--surface-2)',
+                        color: active ? '#F04039' : 'var(--text-3)',
+                        border: `1px solid ${active ? 'rgba(224,50,40,0.38)' : 'var(--border)'}`,
                         fontWeight: active ? 600 : 400, transition: 'all 0.12s',
                       }}>{t.name}</button>
                     );
@@ -525,21 +526,20 @@ function ExperienceDetail({ experience, onBack, token, onRefresh }) {
       {/* Back + Meta */}
       <div>
         <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: '1rem' }}>← Back</button>
-        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '1.4rem', marginBottom: '0.5rem',
-          background: 'linear-gradient(135deg,#e6edf3,#8b949e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+        <h2 style={{ fontFamily: "'Open Sans', sans-serif", fontSize: '1.375rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
           {experience.title}
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <TypeBadge type={experience.type} />
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontFamily: "'JetBrains Mono', monospace" }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 500 }}>
             {formatDate(experience.created_at)} · {experience.uploader_name} · {formatFileSize(experience.file_size_bytes)}
           </span>
         </div>
         {experience.tags?.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.625rem' }}>
             {experience.tags.map((t) => (
-              <span key={t.id} style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '9999px',
-                background: 'rgba(59,130,246,0.12)', color: '#58a6ff', border: '1px solid rgba(59,130,246,0.22)', fontWeight: 500 }}>
+              <span key={t.id} style={{ fontSize: '0.7rem', padding: '0.15rem 0.55rem', borderRadius: '9999px',
+                background: 'rgba(224,50,40,0.10)', color: '#F04039', border: '1px solid rgba(224,50,40,0.22)', fontWeight: 600 }}>
                 {t.name}
               </span>
             ))}
@@ -624,12 +624,12 @@ function ExperienceList({ experiences, onSelect }) {
           {experiences.map((exp) => (
             <tr key={exp.id} style={{ cursor: 'pointer' }} onClick={() => onSelect(exp.id)}>
               <td><TypeBadge type={exp.type} /></td>
-              <td><span style={{ fontWeight: 500, color: 'var(--brand-hover)' }}>{exp.title}</span></td>
+              <td><span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{exp.title}</span></td>
               <td style={{ color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{formatDate(exp.created_at)}</td>
               <td>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
                   {(exp.tags || []).slice(0, 3).map((t) => (
-                    <span key={t.id} style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(59,130,246,0.12)', color: '#58a6ff', border: '1px solid rgba(59,130,246,0.2)', fontWeight: 500 }}>{t.name}</span>
+                    <span key={t.id} style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(224,50,40,0.10)', color: '#F04039', border: '1px solid rgba(224,50,40,0.20)', fontWeight: 600 }}>{t.name}</span>
                   ))}
                 </div>
               </td>
@@ -711,15 +711,17 @@ function ReviewContent() {
 
   return (
     <AppLayout>
-      <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
+      <div className="page-header">
+        <div className="page-header-left">
           <h1 className="page-title">Review Files</h1>
           <p className="page-subtitle">{detail ? 'Viewing experience' : 'All captured experiences'}</p>
         </div>
         {!detail && (
-          <button className="btn btn-ghost btn-sm" onClick={fetchList} disabled={loading}>
-            {loading ? <Spinner dark /> : '↻'} Refresh
-          </button>
+          <div className="page-actions">
+            <button className="btn btn-ghost btn-sm" onClick={fetchList} disabled={loading}>
+              {loading ? <Spinner dark /> : '↻'} Refresh
+            </button>
+          </div>
         )}
       </div>
 
@@ -733,15 +735,15 @@ function ReviewContent() {
       {/* Tag filter bar — list view only */}
       {!detail && allTags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'JetBrains Mono', monospace", marginRight: '0.25rem' }}>Filter:</span>
+          <span style={{ fontSize: '0.63rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.09em', fontWeight: 700, marginRight: '0.25rem' }}>Filter:</span>
           {allTags.map((t) => (
             <button key={t.id} onClick={() => setTagFilter(tagFilter === t.id ? null : t.id)} style={{
-              padding: '0.2rem 0.65rem', borderRadius: '9999px', fontSize: '0.75rem', border: 'none', cursor: 'pointer',
-              background: tagFilter === t.id ? 'rgba(59,130,246,0.22)' : 'var(--surface-2)',
-              color: tagFilter === t.id ? '#58a6ff' : 'var(--text-3)',
-              border: `1px solid ${tagFilter === t.id ? 'rgba(59,130,246,0.4)' : 'var(--border)'}`,
+              padding: '0.2rem 0.65rem', borderRadius: '9999px', fontSize: '0.75rem', cursor: 'pointer',
+              background: tagFilter === t.id ? 'rgba(224,50,40,0.12)' : 'var(--surface-2)',
+              color: tagFilter === t.id ? '#F04039' : 'var(--text-3)',
+              border: `1px solid ${tagFilter === t.id ? 'rgba(224,50,40,0.38)' : 'var(--border)'}`,
               fontWeight: tagFilter === t.id ? 600 : 400,
-              transition: 'all 0.15s',
+              transition: 'all 0.15s', fontFamily: 'inherit',
             }}>{t.name}</button>
           ))}
           {tagFilter && (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { adminGetUsers, adminCreateUser, adminUpdateUser, adminDeleteUser, adminResetPwd, getDepartments, apiGet, adminSetUserTags } from '@/lib/api';
+import { adminGetUsers, adminCreateUser, adminUpdateUser, adminResetPwd, getDepartments, apiGet, adminSetUserTags } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -86,12 +86,12 @@ function UserDrawer({ mode, initial, allDepts, allTags, onSave, onClose, getToke
       {/* Overlay */}
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
       {/* Panel */}
-      <div style={{
+      <div className="drawer-panel" style={{
         width: '420px', background: 'var(--surface)', borderLeft: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', overflowY: 'auto',
       }}>
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '1.1rem' }}>
+          <h2 style={{ fontFamily: "'Open Sans', sans-serif", fontWeight: 700, fontSize: '1.1rem' }}>
             {isEdit ? 'Edit User' : 'Create New User'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-2)' }}>✕</button>
@@ -158,9 +158,9 @@ function UserDrawer({ mode, initial, allDepts, allTags, onSave, onClose, getToke
                 return (
                   <button key={t.id} type="button" onClick={() => toggleTag(t.id)} style={{
                     padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem',
-                    border: `1px solid ${sel ? 'rgba(59,130,246,0.5)' : 'var(--border)'}`,
-                    background: sel ? 'rgba(59,130,246,0.18)' : 'transparent',
-                    color: sel ? '#58a6ff' : 'var(--text-2)', cursor: 'pointer',
+                    border: `1px solid ${sel ? 'rgba(224,50,40,0.40)' : 'var(--border)'}`,
+                    background: sel ? 'rgba(224,50,40,0.12)' : 'transparent',
+                    color: sel ? '#F04039' : 'var(--text-2)', cursor: 'pointer',
                     fontWeight: sel ? 600 : 400, transition: 'all 0.12s',
                   }}>{sel ? '✓ ' : ''}{t.name}</button>
                 );
@@ -218,7 +218,7 @@ function ResetModal({ user: target, onDone, onClose, getToken }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '1.5rem', width: '360px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h3 style={{ fontFamily: 'DM Serif Display, serif' }}>Reset Password</h3>
+          <h3 style={{ fontFamily: "'Open Sans', sans-serif", fontWeight: 700 }}>Reset Password</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)' }}>✕</button>
         </div>
         <p style={{ fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '1rem' }}>
@@ -291,11 +291,11 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-xs)' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-2xl)', overflow: 'hidden', boxShadow: 'var(--shadow-xs)' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner dark /></div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-scroll">
             <table className="data-table">
               <thead>
                 <tr><th>User</th><th>Role</th><th>Departments</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
