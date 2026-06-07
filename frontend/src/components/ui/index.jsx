@@ -133,7 +133,8 @@ export const formatDate = (str) => {
 };
 
 export const formatTime = (secs) => {
-  const m = Math.floor((secs || 0) / 60).toString().padStart(2, '0');
-  const s = Math.floor((secs || 0) % 60).toString().padStart(2, '0');
+  if (!isFinite(secs) || isNaN(secs) || secs == null) return '--:--';
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = Math.floor(secs % 60).toString().padStart(2, '0');
   return `${m}:${s}`;
 };

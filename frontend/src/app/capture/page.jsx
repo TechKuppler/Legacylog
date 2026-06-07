@@ -5,6 +5,7 @@ import { useRouter }    from 'next/navigation';
 import AppLayout        from '@/components/layout/AppLayout';
 import { TagPicker, LanguageSelect, formatFileSize, formatTime } from '@/components/ui';
 import { apiGet, apiUpload, apiPost, getDepartments } from '@/lib/api';
+import { startUpload } from '@/lib/uploadQueue';
 import { useAuth, usePermissions } from '@/lib/AuthContext';
 
 // ─── Recording State Machine ──────────────────────────────────────────────────
@@ -41,10 +42,7 @@ export default function CapturePage() {
   const streamRef                 = useRef(null);
 
   // ── Submission ──
-  const [submitting, setSubmitting] = useState(false);
-  const [progress,   setProgress]   = useState(0);
-  const [success,    setSuccess]    = useState(false);
-  const [error,      setError]      = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const token = getToken();
@@ -139,8 +137,6 @@ export default function CapturePage() {
     if (!file && !audioBlob) { setError('Please upload a file or record audio first.'); return; }
     if (!title.trim())       { setError('Please enter a title.'); return; }
 
-    setSubmitting(true); setError(''); setProgress(15);
-
     const fd = new FormData();
     fd.append('title',    title.trim());
     fd.append('language', language);
@@ -155,16 +151,14 @@ export default function CapturePage() {
       fd.append('file', blob);
     }
 
-    try {
-      setProgress(50);
-      await apiUpload('/experiences', fd, getToken());
-      setProgress(100); setSuccess(true);
-      setTimeout(() => router.push('/dashboard'), 1400);
-    } catch (err) {
-      setError(err.message || 'Save failed.');
-    } finally {
-      setSubmitting(false);
-    }
+    // Register the upload with the global queue before navigating away so the
+    // review page can show a "processing" banner. The fetch continues running
+    // even after client-side navigation (same JS bundle stays alive).
+    const uploadPromise = apiUpload('/experiences', fd, getToken());
+    startUpload(uploadPromise);
+
+    // Redirect immediately — don't wait for the upload to finish.
+    router.push('/dashboard?uploading=1');
   };
 
   const hasSource = !!(file || audioBlob);
@@ -181,7 +175,6 @@ export default function CapturePage() {
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
 
           {/* Alerts */}
-          {success && <div className="alert-success">✓ Saved successfully — redirecting…</div>}
           {(error || micError) && (
             <div className="alert-error">
               <span>⚠</span>
@@ -200,11 +193,11 @@ export default function CapturePage() {
               <div
                 className={`drop-zone ${dragOver ? 'dragover' : ''}`}
                 style={{
-                  minHeight: '180px', cursor: submitting ? 'default' : 'pointer',
+                  minHeight: '180px', cursor: 'pointer',
                   outline: file ? '2px solid var(--brand)' : undefined,
                   outlineOffset: '-2px',
                 }}
-                onClick={() => !submitting && fileInputRef.current?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 onDrop={onDrop}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
@@ -260,7 +253,7 @@ export default function CapturePage() {
                     </p>
                     <button
                       type="button" className="btn btn-ghost btn-sm"
-                      onClick={discardRecording} disabled={submitting}
+                      onClick={discardRecording}
                       style={{ alignSelf: 'center' }}
                     >
                       ✕ Discard &amp; Re-record
@@ -281,14 +274,13 @@ export default function CapturePage() {
                       type="button"
                       onClick={recState === REC.IDLE ? startRecording : stopRecording}
                       className={recState === REC.RECORDING ? 'record-pulse' : ''}
-                      disabled={submitting}
                       style={{
                         width: '3.75rem', height: '3.75rem', borderRadius: '50%',
                         background: recState === REC.RECORDING
                           ? 'linear-gradient(135deg,#ef4444,#dc2626)'
                           : 'linear-gradient(135deg,#f87171,#ef4444)',
                         border: 'none',
-                        cursor: submitting ? 'default' : 'pointer',
+                        cursor: 'pointer',
                         color: '#fff', fontSize: '1.375rem',
                         boxShadow: recState === REC.RECORDING
                           ? '0 0 24px rgba(239,68,68,0.6), 0 4px 12px rgba(0,0,0,0.4)'
@@ -331,13 +323,13 @@ export default function CapturePage() {
               type="text" className="input"
               placeholder="Give this capture a descriptive title"
               value={title} onChange={(e) => setTitle(e.target.value)}
-              maxLength={255} disabled={submitting}
+              maxLength={255}
             />
           </div>
 
           <div>
             <label className="field-label">Language</label>
-            <LanguageSelect value={language} onChange={setLanguage} disabled={submitting} />
+            <LanguageSelect value={language} onChange={setLanguage} />
           </div>
 
           {allDepts.length > 0 && (
@@ -347,7 +339,6 @@ export default function CapturePage() {
                 className="select"
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
-                disabled={submitting}
               >
                 <option value="">— No department —</option>
                 {allDepts.map((d) => (
@@ -370,22 +361,12 @@ export default function CapturePage() {
             />
           </div>
 
-          {/* Progress bar */}
-          {submitting && (
-            <div style={{ height: '3px', borderRadius: '2px', background: 'var(--border)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progress}%`, background: 'var(--brand)', transition: 'width 0.4s' }} />
-            </div>
-          )}
-
           {/* Actions */}
           <div style={{ display: 'flex', gap: '0.625rem', paddingTop: '0.25rem' }}>
-            <button type="submit" className="btn btn-primary" disabled={submitting || success || !hasSource}>
-              {submitting
-                ? <><span className="spinner" /> Saving…</>
-                : audioBlob ? '💾 Save & Transcribe' : 'Upload & Save'}
+            <button type="submit" className="btn btn-primary" disabled={!hasSource}>
+              {audioBlob ? '💾 Save & Transcribe' : 'Upload & Save'}
             </button>
-            <button type="button" className="btn btn-ghost"
-              onClick={() => router.push('/dashboard')} disabled={submitting}>
+            <button type="button" className="btn btn-ghost" onClick={() => router.push('/dashboard')}>
               Cancel
             </button>
           </div>

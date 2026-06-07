@@ -15,6 +15,8 @@ const { listDepartments, createDepartment,
 const { listExperiences, getExperience, createExperience,
         updateExperience, deleteExperience, streamFile,
         replaceFile }                                              = require('../controllers/experienceController');
+const { listAttachments, addAttachment,
+        streamAttachment, deleteAttachment }                       = require('../controllers/attachmentController');
 const { getProviderInfo }                                          = require('../services/aiService');
 
 // ─── Health / Info ────────────────────────────────────────────────────────────
@@ -56,6 +58,12 @@ router.patch ('/experiences/:id', requireAuth, updateExperience);
 router.delete('/experiences/:id', requireAuth, deleteExperience);
 router.get   ('/experiences/:id/file', requireAuth, streamFile);
 router.put   ('/experiences/:id/file', requireAuth, upload.single('file'), replaceFile);
+
+// ─── Experience Attachments ───────────────────────────────────────────────────
+router.get   ('/experiences/:id/attachments',                    requireAuth, listAttachments);
+router.post  ('/experiences/:id/attachments',                    requireAuth, upload.single('file'), addAttachment);
+router.get   ('/experiences/:id/attachments/:attachId/file',     requireAuth, streamAttachment);
+router.delete('/experiences/:id/attachments/:attachId',          requireAuth, deleteAttachment);
 
 // ─── Experience Notes ─────────────────────────────────────────────────────────
 router.get   ('/experiences/:id/notes',            requireAuth, getNotes);

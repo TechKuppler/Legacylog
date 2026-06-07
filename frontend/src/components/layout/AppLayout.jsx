@@ -3,21 +3,31 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import {
+  LayoutDashboard, CirclePlus, FileSearch, ShieldCheck,
+  FileText, LogOut, X, ChevronRight, Mic, FileStack,
+} from 'lucide-react';
 import { useAuth, usePermissions } from '@/lib/AuthContext';
 import { apiGet } from '@/lib/api';
 
-const TYPE_ICON = { audio: '🎙', pdf: '📄', doc: '📝', txt: '📃' };
+const TYPE_ICON = {
+  audio: <Mic size={13} />,
+  pdf:   <FileText size={13} />,
+  doc:   <FileText size={13} />,
+  txt:   <FileText size={13} />,
+};
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
-function Avatar({ name, size = '1.875rem', fontSize = '0.7rem' }) {
+function Avatar({ name, size = '2rem', fontSize = '0.7rem' }) {
   const initials = (name || 'U').split(' ').slice(0, 2).map((w) => w[0].toUpperCase()).join('');
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: 'linear-gradient(135deg, #E03228, #B82520)',
+      background: 'linear-gradient(135deg, #D94A44, #B93A34)',
       color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize, fontWeight: 700, flexShrink: 0,
       fontFamily: "'Open Sans', sans-serif",
+      boxShadow: '0 0 0 2px rgba(217,74,68,0.22)',
     }}>{initials}</div>
   );
 }
@@ -27,19 +37,33 @@ function NavItem({ href, label, icon, active, onClick }) {
   return (
     <Link href={href} onClick={onClick} style={{
       display: 'flex', alignItems: 'center', gap: '0.625rem',
-      padding: '0.45rem 0.625rem', borderRadius: 'var(--r-md)',
+      padding: '0.5rem 0.75rem', borderRadius: '0.625rem',
       fontSize: '0.8125rem', fontWeight: active ? 600 : 400,
       color: active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text)',
       background: active ? 'var(--sidebar-active-bg)' : 'transparent',
-      textDecoration: 'none', marginBottom: '0.125rem',
-      borderLeft: active ? '2px solid var(--brand)' : '2px solid transparent',
-      transition: 'all 0.15s',
+      textDecoration: 'none', marginBottom: '0.1rem',
+      transition: 'all 120ms ease',
     }}
-    onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; e.currentTarget.style.color = 'var(--sidebar-text-hover)'; e.currentTarget.style.borderLeftColor = 'rgba(224,50,40,0.3)'; } }}
-    onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; e.currentTarget.style.borderLeftColor = 'transparent'; } }}
+    onMouseEnter={(e) => {
+      if (!active) {
+        e.currentTarget.style.background = 'var(--sidebar-hover-bg)';
+        e.currentTarget.style.color = 'var(--sidebar-text-hover)';
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (!active) {
+        e.currentTarget.style.background = 'transparent';
+        e.currentTarget.style.color = 'var(--sidebar-text)';
+      }
+    }}
     >
-      <span style={{ fontSize: '0.85rem', width: '1.1rem', textAlign: 'center', opacity: active ? 1 : 0.6 }}>{icon}</span>
-      <span>{label}</span>
+      <span style={{
+        color: active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text)',
+        display: 'flex', alignItems: 'center', flexShrink: 0,
+        opacity: active ? 1 : 0.65,
+      }}>{icon}</span>
+      <span style={{ flex: 1, lineHeight: 1.3 }}>{label}</span>
+      {active && <ChevronRight size={12} style={{ color: 'var(--sidebar-active-text)', opacity: 0.5 }} />}
     </Link>
   );
 }
@@ -55,13 +79,6 @@ function Sidebar({ open, onClose }) {
   const [experiences,  setExperiences]  = useState([]);
   const [allTags,      setAllTags]      = useState([]);
   const [activeTagId,  setActiveTagId]  = useState(null);
-
-  const NAV_ITEMS = [
-    { href: '/dashboard', label: 'Dashboard',          icon: '⊞', show: true },
-    { href: '/capture',   label: 'Capture Experience', icon: '⊕', show: isAdmin || can('can_upload') || can('can_record') },
-    { href: '/review',    label: 'Review Files',       icon: '◫', show: true },
-    { href: '/admin',     label: 'Admin Panel',        icon: '⚙', show: isAdmin, divider: true },
-  ].filter((i) => i.show);
 
   const loadSidebar = useCallback(async () => {
     const token = getToken();
@@ -92,123 +109,169 @@ function Sidebar({ open, onClose }) {
     onClose?.();
   };
 
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard',          icon: <LayoutDashboard size={16} />, show: true },
+    { href: '/capture',   label: 'Capture Experience', icon: <CirclePlus size={16} />,      show: isAdmin || can('can_upload') || can('can_record') },
+    { href: '/review',    label: 'Review Files',       icon: <FileSearch size={16} />,      show: true },
+  ].filter((i) => i.show);
+
   return (
     <>
-      {/* Mobile backdrop */}
       {open && (
         <div onClick={onClose} style={{
-          position: 'fixed', inset: 0, zIndex: 99,
-          background: 'rgba(0,0,0,0.6)',
-        }} className="sidebar-backdrop" />
+          position: 'fixed', inset: 0, zIndex: 199,
+          background: 'rgba(0,0,0,0.70)',
+          backdropFilter: 'blur(2px)',
+        }} />
       )}
 
       <aside className={`sidebar${open ? ' sidebar-open' : ''}`} suppressHydrationWarning>
-        {/* Brand */}
-        <div style={{ padding: '1.125rem 1rem 1rem', borderBottom: '1px solid var(--sidebar-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
+
+        {/* Brand header */}
+        <div style={{
+          padding: '1.125rem 1rem 1rem',
+          borderBottom: '1px solid var(--sidebar-border)',
+          flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <div style={{
-              fontFamily: "'Open Sans', sans-serif",
-              fontSize: '1.1rem',
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              color: 'var(--text-1)',
-            }}>LegacyLog</div>
-            <div style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', marginTop: '0.15rem', letterSpacing: '0.02em', fontWeight: 400 }}>Kuppler Knowledge Base</div>
+              width: '1.75rem', height: '1.75rem', borderRadius: '7px',
+              background: 'linear-gradient(135deg, #D94A44, #B93A34)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.65rem', color: '#fff', fontWeight: 800, flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(217,74,68,0.35)',
+            }}>LL</div>
+            <div>
+              <div style={{
+                fontFamily: "'Open Sans', sans-serif",
+                fontSize: '0.9375rem', fontWeight: 800,
+                letterSpacing: '-0.03em', color: 'var(--text-1)',
+              }}>LegacyLog</div>
+              <div style={{ fontSize: '0.575rem', color: 'var(--text-4)', fontWeight: 500, letterSpacing: '0.02em', marginTop: '0.05rem' }}>
+                Kuppler Knowledge Base
+              </div>
+            </div>
           </div>
-          {/* Close button — mobile only */}
-          <button onClick={onClose} className="sidebar-close-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sidebar-text)', fontSize: '1rem', display: 'none' }}>✕</button>
+          <button onClick={onClose} className="sidebar-close-btn" style={{
+            background: 'var(--surface-2)', border: '1px solid var(--border)',
+            cursor: 'pointer', color: 'var(--text-3)',
+            display: 'none', width: '1.875rem', height: '1.875rem',
+            borderRadius: '0.5rem', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <X size={14} />
+          </button>
         </div>
 
-        {/* Nav */}
-        <nav style={{ padding: '0.5rem', flexShrink: 0 }}>
-          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.75rem 0.625rem 0.4rem' }}>
-            Menu
-          </div>
-          {NAV_ITEMS.map(({ href, label, icon, divider }) => {
+        {/* Navigation */}
+        <nav style={{ padding: '0.625rem 0.625rem 0', flexShrink: 0 }}>
+          <div className="sidebar-group-label">Navigation</div>
+          {navItems.map(({ href, label, icon }) => {
             const active = pathname === href || (pathname.startsWith(href + '/') && href !== '/review');
-            return (
-              <div key={href}>
-                {divider && <div style={{ height: '1px', background: 'var(--sidebar-border)', margin: '0.4rem 0.5rem' }} />}
-                <NavItem href={href} label={label} icon={icon} active={active} onClick={onClose} />
-              </div>
-            );
+            return <NavItem key={href} href={href} label={label} icon={icon} active={active} onClick={onClose} />;
           })}
+
+          {isAdmin && (
+            <>
+              <div className="sidebar-group-label" style={{ marginTop: '0.75rem' }}>Workspace</div>
+              <NavItem
+                href="/admin" label="Admin Panel"
+                icon={<ShieldCheck size={16} />}
+                active={pathname === '/admin' || pathname.startsWith('/admin/')}
+                onClick={onClose}
+              />
+            </>
+          )}
         </nav>
 
-        {/* Experiences + tag filter */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.5rem', borderTop: '1px solid var(--sidebar-border)' }}>
-          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.75rem 0.625rem 0.4rem' }}>
-            Experiences
-          </div>
+        {/* Recent Captures */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.625rem', borderTop: '1px solid var(--sidebar-border)', marginTop: '0.5rem' }}>
+          <div className="sidebar-group-label">Recent Captures</div>
 
-          {/* Tag filter chips */}
           {allTags.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', padding: '0 0.25rem 0.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', paddingBottom: '0.5rem' }}>
               {allTags.slice(0, 8).map((t) => (
                 <button key={t.id} onClick={() => setActiveTagId(activeTagId === t.id ? null : t.id)} style={{
-                  padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.63rem',
-                  background: activeTagId === t.id ? 'rgba(224,50,40,0.15)' : 'transparent',
-                  color: activeTagId === t.id ? '#F04039' : 'var(--sidebar-text)',
-                  border: `1px solid ${activeTagId === t.id ? 'rgba(224,50,40,0.35)' : 'var(--sidebar-border)'}`,
+                  padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.595rem',
+                  background: activeTagId === t.id ? 'rgba(217,74,68,0.12)' : 'transparent',
+                  color: activeTagId === t.id ? '#D94A44' : 'var(--sidebar-text)',
+                  border: `1px solid ${activeTagId === t.id ? 'rgba(217,74,68,0.3)' : 'var(--sidebar-border)'}`,
                   cursor: 'pointer', fontWeight: activeTagId === t.id ? 600 : 400,
-                  transition: 'all 0.15s', fontFamily: 'inherit',
+                  transition: 'all 120ms ease', fontFamily: 'inherit',
                 }}>{t.name}</button>
               ))}
               {activeTagId && (
-                <button onClick={() => setActiveTagId(null)} style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: '0.1rem 0.25rem', fontFamily: 'inherit' }}>
-                  clear
-                </button>
+                <button onClick={() => setActiveTagId(null)} style={{
+                  fontSize: '0.595rem', color: 'var(--text-4)', background: 'none',
+                  border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '0.1rem',
+                }}>clear</button>
               )}
             </div>
           )}
 
           {!filteredExps.length && (
-            <p style={{ fontSize: '0.72rem', color: 'var(--sidebar-text)', padding: '0.25rem 0.625rem', opacity: 0.5 }}>
-              {activeTagId ? 'No matches for this tag' : 'No experiences yet'}
-            </p>
+            <div style={{ padding: '1.5rem 0.5rem', textAlign: 'center' }}>
+              <FileStack size={20} style={{ color: 'var(--text-4)', opacity: 0.35, display: 'block', margin: '0 auto 0.5rem' }} />
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-4)', lineHeight: 1.5 }}>
+                {activeTagId ? 'No matches for this tag' : 'No captures yet'}
+              </p>
+            </div>
           )}
-          {filteredExps.map((exp) => {
+
+          {filteredExps.slice(0, 20).map((exp) => {
             const isActive = selectedId && String(selectedId) === String(exp.id);
             return (
               <button key={exp.id} onClick={() => handleExpClick(exp.id)} style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.4rem 0.625rem', borderRadius: 'var(--r-md)',
+                padding: '0.45rem 0.75rem', borderRadius: '0.625rem',
                 background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
                 border: 'none', cursor: 'pointer', textAlign: 'left',
-                borderLeft: isActive ? '2px solid var(--brand)' : '2px solid transparent',
-                marginBottom: '0.1rem', transition: 'all 0.12s', fontFamily: 'inherit',
+                marginBottom: '0.05rem', transition: 'all 120ms ease', fontFamily: 'inherit',
               }}
-              onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; e.currentTarget.style.borderLeftColor = 'rgba(224,50,40,0.25)'; } }}
-              onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderLeftColor = 'transparent'; } }}
+              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; }}
+              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
               >
-                <span style={{ fontSize: '0.75rem', flexShrink: 0, opacity: 0.6 }}>{TYPE_ICON[exp.type] || '📄'}</span>
-                <span style={{ fontSize: '0.77rem', fontWeight: 500, color: isActive ? 'var(--sidebar-active-text)' : 'var(--sidebar-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {exp.title}
+                <span style={{ color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-4)', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  {TYPE_ICON[exp.type] || <FileText size={13} />}
                 </span>
+                <span style={{
+                  fontSize: '0.775rem', fontWeight: isActive ? 600 : 400,
+                  color: isActive ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-hover)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, lineHeight: 1.35,
+                }}>{exp.title}</span>
               </button>
             );
           })}
         </div>
 
-        {/* User Footer */}
-        <div style={{ padding: '0.75rem', borderTop: '1px solid var(--sidebar-border)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem', padding: '0 0.125rem' }}>
+        {/* Account footer */}
+        <div style={{
+          padding: '0.75rem 0.875rem',
+          borderTop: '1px solid var(--sidebar-border)',
+          flexShrink: 0,
+        }}>
+          <div className="sidebar-group-label">Account</div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem',
+            padding: '0.5rem 0.5rem', borderRadius: '0.625rem',
+            background: 'var(--sidebar-hover-bg)', border: '1px solid var(--sidebar-border)',
+          }}>
             <Avatar name={user?.name} />
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>{user?.role}</div>
+              <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+              <div style={{ fontSize: '0.595rem', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginTop: '0.1rem' }}>{user?.role}</div>
             </div>
           </div>
           <button onClick={handleLogout} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.4rem 0.625rem', borderRadius: 'var(--r-md)',
-            background: 'transparent', border: '1px solid transparent', cursor: 'pointer',
-            fontSize: '0.77rem', color: 'var(--sidebar-text)', transition: 'all 0.15s', fontFamily: 'inherit',
+            padding: '0.45rem 0.75rem', borderRadius: '0.625rem',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            fontSize: '0.78rem', color: 'var(--text-3)', transition: 'all 120ms ease', fontFamily: 'inherit',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(224,50,40,0.08)'; e.currentTarget.style.color = '#F04039'; e.currentTarget.style.borderColor = 'rgba(224,50,40,0.2)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; e.currentTarget.style.borderColor = 'transparent'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(217,74,68,0.08)'; e.currentTarget.style.color = '#D94A44'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; }}
           >
-            <span style={{ fontSize: '0.85rem' }}>↩</span><span>Sign out</span>
+            <LogOut size={14} style={{ flexShrink: 0 }} />
+            <span>Sign out</span>
           </button>
         </div>
       </aside>
@@ -230,8 +293,15 @@ export default function AppLayout({ children }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
-        <span className="spinner spinner-dark" style={{ width: '1.5rem', height: '1.5rem' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{
+          width: '2.5rem', height: '2.5rem', borderRadius: '10px',
+          background: 'linear-gradient(135deg, #D94A44, #B93A34)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '0.85rem', color: '#fff', fontWeight: 800,
+          boxShadow: '0 4px 16px rgba(217,74,68,0.35)',
+        }}>LL</div>
+        <span className="spinner spinner-dark" style={{ width: '1.25rem', height: '1.25rem' }} />
       </div>
     );
   }
@@ -240,19 +310,31 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="app-layout">
-      <Suspense fallback={null}><Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} /></Suspense>
+      <Suspense fallback={null}>
+        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </Suspense>
       <main className="main-content">
-        {/* Mobile top bar */}
         <div className="mobile-topbar">
           <button
             onClick={() => setSidebarOpen(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.5rem', height: '2.5rem', borderRadius: 'var(--r-md)' }}
+            style={{
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+              cursor: 'pointer', color: 'var(--text-2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem',
+            }}
             aria-label="Open menu"
-          >☰</button>
-          <span style={{ fontFamily: "'Open Sans', sans-serif", fontSize: '1.0625rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-1)' }}>
-            LegacyLog
-          </span>
-          <div style={{ width: '2.5rem' }} />
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <path d="M2 3.5h11M2 7.5h11M2 11.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <span style={{
+            fontFamily: "'Open Sans', sans-serif",
+            fontSize: '1rem', fontWeight: 800,
+            letterSpacing: '-0.03em', color: 'var(--text-1)',
+          }}>LegacyLog</span>
+          <div style={{ width: '2.25rem' }} />
         </div>
         <div className="page-wrap">
           {children}
