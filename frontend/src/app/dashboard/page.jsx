@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import { StatusBadge, TypeBadge, Spinner, EmptyState, formatDate, formatFileSize } from '@/components/ui';
 import { apiGet, apiDelete } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
+import { subscribe as subscribeUploads, getPendingCount } from '@/lib/uploadQueue';
 
 // ─── Metric Tile ──────────────────────────────────────────────────────────────
 function MetricTile({ value, label, accent }) {
@@ -128,13 +129,24 @@ function ExperienceCard({ exp, onView, onDelete, deleting }) {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { getToken } = useAuth();
-  const router       = useRouter();
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
 
-  const [experiences, setExperiences] = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState('');
-  const [deleting,    setDeleting]    = useState(null);
+function DashboardContent() {
+  const { getToken }  = useAuth();
+  const router        = useRouter();
+  const searchParams  = useSearchParams();
+  const showUploading = searchParams.get('uploading') === '1';
+
+  const [experiences,    setExperiences]    = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState('');
+  const [deleting,       setDeleting]       = useState(null);
+  const [pendingUploads, setPendingUploads] = useState(getPendingCount);
 
   const fetchExperiences = useCallback(async () => {
     setLoading(true); setError('');
@@ -149,6 +161,16 @@ export default function DashboardPage() {
   }, [getToken]);
 
   useEffect(() => { fetchExperiences(); }, [fetchExperiences]);
+
+  // Auto-refresh list when background upload finishes
+  useEffect(() => {
+    let prev = getPendingCount();
+    return subscribeUploads((count) => {
+      setPendingUploads(count);
+      if (count === 0 && prev > 0) fetchExperiences();
+      prev = count;
+    });
+  }, [fetchExperiences]);
 
   const handleDelete = async (id, title) => {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
@@ -185,6 +207,32 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Background upload banner */}
+      {(showUploading || pendingUploads > 0) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          padding: '0.875rem 1rem', marginBottom: '1rem',
+          background: 'rgba(224,50,40,0.07)', border: '1px solid rgba(224,50,40,0.25)',
+          borderRadius: 'var(--r-lg)',
+        }}>
+          <Spinner dark />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-1)' }}>
+              {pendingUploads > 0 ? 'Uploading in the background…' : 'Processing your upload…'}
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>
+              {pendingUploads > 0
+                ? 'Your file is being uploaded. The dashboard will refresh automatically when done.'
+                : 'Upload complete — refreshing the list now.'}
+            </p>
+          </div>
+          {pendingUploads === 0 && (
+            <button onClick={() => router.replace('/dashboard', { scroll: false })}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '1rem' }}>✕</button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="alert-error" style={{ marginBottom: '1rem' }}>

@@ -36,17 +36,22 @@ async function submitTranscription(audioUrl, languageHint) {
 
   const body = {
     audio_url:          audioUrl,
-    auto_chapters:      true,   // provides per-chapter gist/headline/summary
     auto_highlights:    true,
     entity_detection:   true,
     sentiment_analysis: true,
-    // summarization is mutually exclusive with auto_chapters — omitted
   };
 
   if (useDetection) {
+    // language_detection routes to a multilingual model that does not support
+    // auto_chapters (English-only). Including it triggers a 400 from AssemblyAI:
+    // "Only one of the following models can be enabled at a time: auto_chapters, summarization"
     body.language_detection = true;
   } else {
     body.language_code = languageHint; // 'en' or 'hi'
+    // auto_chapters only works when language is explicitly set (English model)
+    if (languageHint === 'en') {
+      body.auto_chapters = true;
+    }
   }
 
   const res = await fetch(`${BASE}/transcript`, {

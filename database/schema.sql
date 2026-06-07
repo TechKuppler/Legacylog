@@ -164,6 +164,18 @@ ALTER TABLE experiences ADD COLUMN IF NOT EXISTS file_data  BYTEA        NULL;
 ALTER TABLE experiences ADD COLUMN IF NOT EXISTS mime_type  VARCHAR(120) NULL;
 ALTER TABLE experiences ALTER COLUMN original_path          DROP NOT NULL;
 
+-- Phase 5: Additional attachments per experience
+CREATE TABLE IF NOT EXISTS experience_attachments (
+  id               SERIAL PRIMARY KEY,
+  experience_id    INT          NOT NULL REFERENCES experiences(id) ON DELETE CASCADE,
+  original_name    VARCHAR(255) NOT NULL,
+  file_size_bytes  BIGINT       NOT NULL,
+  mime_type        VARCHAR(120) NULL,
+  file_data        BYTEA        NOT NULL,
+  uploaded_by      INT          NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  created_at       TIMESTAMPTZ  DEFAULT NOW()
+);
+
 -- Phase 3: User-tag direct assignment and notes tables (safe no-ops on fresh install)
 CREATE TABLE IF NOT EXISTS user_tags (
   user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -94,3 +94,16 @@ export const replaceExperienceFile = (id, file, token) => {
 export const getNotes    = (expId, token)          => apiGet(`/experiences/${expId}/notes`, token);
 export const addNote     = (expId, body, token)    => apiPost(`/experiences/${expId}/notes`, body, token);
 export const deleteNote  = (expId, noteId, token)  => apiDelete(`/experiences/${expId}/notes/${noteId}`, token);
+
+// ─── Experience Attachments ───────────────────────────────────────────────────
+export const getAttachments    = (expId, token)            => apiGet(`/experiences/${expId}/attachments`, token);
+export const deleteAttachment  = (expId, attachId, token)  => apiDelete(`/experiences/${expId}/attachments/${attachId}`, token);
+export const getAttachmentUrl  = (expId, attachId)         => `${BASE_URL}/experiences/${expId}/attachments/${attachId}/file`;
+
+export const addAttachment = (expId, file, token) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return fetch(`${BASE_URL}/experiences/${expId}/attachments`, {
+    method: 'POST', headers: authHeaders(token), body: fd,
+  }).then(handleResponse);
+};

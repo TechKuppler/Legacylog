@@ -7,8 +7,120 @@ import {
   StatusBadge, TypeBadge, Spinner, EmptyState,
   formatDate, formatFileSize, formatTime,
 } from '@/components/ui';
-import { apiGet, apiPost, apiPatch, downloadFile, getFileStreamUrl, getNotes, addNote, deleteNote, replaceExperienceFile } from '@/lib/api';
+import { apiGet, apiPost, apiPatch, downloadFile, getFileStreamUrl, getNotes, addNote, deleteNote, replaceExperienceFile, getAttachments, addAttachment, deleteAttachment, getAttachmentUrl } from '@/lib/api';
+import { subscribe as subscribeUploads, getPendingCount } from '@/lib/uploadQueue';
 import { useAuth } from '@/lib/AuthContext';
+
+// ─── Inline PDF Viewer (pdfjs-dist, mobile-friendly) ─────────────────────────
+function PDFViewer({ src, token }) {
+  const containerRef  = useRef(null);
+  const [pdfDoc,      setPdfDoc]      = useState(null);
+  const [numPages,    setNumPages]    = useState(0);
+  const [scale,       setScale]       = useState(1.2);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const canvasRefs    = useRef([]);
+
+  // Load PDF.js lazily (avoids SSR issues)
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true); setError('');
+    (async () => {
+      try {
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+        const res = await fetch(src, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        if (!res.ok) throw new Error(`Failed to load PDF (HTTP ${res.status})`);
+        const arrayBuffer = await res.arrayBuffer();
+        if (cancelled) return;
+
+        const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        if (cancelled) return;
+        setPdfDoc(doc);
+        setNumPages(doc.numPages);
+      } catch (e) {
+        if (!cancelled) setError(e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [src, token]);
+
+  // Re-render all pages when doc or scale changes
+  useEffect(() => {
+    if (!pdfDoc) return;
+    (async () => {
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const canvas = canvasRefs.current[i - 1];
+        if (!canvas) continue;
+        const page     = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale });
+        canvas.width   = viewport.width;
+        canvas.height  = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      }
+    })();
+  }, [pdfDoc, scale]);
+
+  const zoomIn  = () => setScale((s) => Math.min(s + 0.25, 3));
+  const zoomOut = () => setScale((s) => Math.max(s - 0.25, 0.5));
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.5rem',
+        padding: '0.5rem 0.875rem', borderBottom: '1px solid var(--border)',
+        background: 'var(--surface-2)',
+      }}>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontWeight: 600, flex: 1 }}>
+          {numPages > 0 ? `${numPages} page${numPages > 1 ? 's' : ''}` : 'PDF'}
+        </span>
+        <button onClick={zoomOut} disabled={scale <= 0.5} style={{
+          padding: '0.25rem 0.6rem', borderRadius: 'var(--r-sm)',
+          background: 'var(--surface-3)', border: '1px solid var(--border)',
+          color: 'var(--text-2)', cursor: 'pointer', fontSize: '0.85rem',
+        }}>−</button>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', minWidth: '3rem', textAlign: 'center' }}>
+          {Math.round(scale * 100)}%
+        </span>
+        <button onClick={zoomIn} disabled={scale >= 3} style={{
+          padding: '0.25rem 0.6rem', borderRadius: 'var(--r-sm)',
+          background: 'var(--surface-3)', border: '1px solid var(--border)',
+          color: 'var(--text-2)', cursor: 'pointer', fontSize: '0.85rem',
+        }}>+</button>
+      </div>
+
+      {/* Canvas scroll area */}
+      <div ref={containerRef} style={{
+        overflowX: 'auto', overflowY: 'auto',
+        maxHeight: '70vh', padding: '1rem',
+        touchAction: 'pan-x pan-y',
+        background: '#525659',
+        display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center',
+      }}>
+        {loading && (
+          <div style={{ padding: '3rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ccc' }}>
+            <Spinner /> Loading PDF…
+          </div>
+        )}
+        {error && (
+          <p style={{ color: '#f85149', padding: '2rem', fontSize: '0.85rem' }}>⚠ {error}</p>
+        )}
+        {!loading && !error && Array.from({ length: numPages }, (_, i) => (
+          <canvas
+            key={i}
+            ref={(el) => { canvasRefs.current[i] = el; }}
+            style={{ maxWidth: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', borderRadius: '2px' }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── Custom Audio Player ──────────────────────────────────────────────────────
 function AudioPlayer({ src, token }) {
@@ -27,6 +139,25 @@ function AudioPlayer({ src, token }) {
     return () => { if (url) URL.revokeObjectURL(url); };
   }, [src, token]);
 
+  // WebM/Ogg from MediaRecorder has no duration header — seek to Infinity
+  // to force the browser to scan the file and report the real duration.
+  const handleLoadedMetadata = () => {
+    const a = audioRef.current; if (!a) return;
+    const d = a.duration;
+    if (isFinite(d) && d > 0) { setDuration(d); return; }
+    // Duration is Infinity — trigger browser scan
+    a.currentTime = 1e101;
+  };
+  const handleDurationChange = () => {
+    const a = audioRef.current; if (!a) return;
+    const d = a.duration;
+    if (isFinite(d) && d > 0) {
+      setDuration(d);
+      // Reset playhead to beginning after the scan seek
+      if (a.currentTime > d) a.currentTime = 0;
+    }
+  };
+
   const toggle = () => {
     const a = audioRef.current; if (!a) return;
     if (playing) { a.pause(); setPlaying(false); }
@@ -40,8 +171,9 @@ function AudioPlayer({ src, token }) {
       {blobUrl && (
         <audio ref={audioRef} src={blobUrl} preload="metadata"
           onTimeUpdate={() => setCurrent(audioRef.current?.currentTime || 0)}
-          onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
-          onEnded={() => setPlaying(false)}
+          onLoadedMetadata={handleLoadedMetadata}
+          onDurationChange={handleDurationChange}
+          onEnded={() => { setPlaying(false); setCurrent(0); }}
         />
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
@@ -57,9 +189,10 @@ function AudioPlayer({ src, token }) {
           : playing ? '⏸' : '▶'}
         </button>
         <span style={{ fontSize: '0.78rem', color: 'var(--text-2)', minWidth: '4.5rem', fontWeight: 600 }}>
-          {formatTime(current)} / {formatTime(duration)}
+          {formatTime(current)} / {duration > 0 ? formatTime(duration) : '--:--'}
         </span>
-        <input type="range" className="seek-bar" min={0} max={duration || 100} step={0.1} value={current}
+        <input type="range" className="seek-bar" min={0} max={duration > 0 ? duration : 100} step={0.1} value={current}
+          disabled={duration === 0}
           onChange={(e) => { if (audioRef.current) audioRef.current.currentTime = Number(e.target.value); setCurrent(Number(e.target.value)); }}
           style={{ background: `linear-gradient(to right, var(--brand) ${pct}%, var(--surface-3) ${pct}%)` }}
         />
@@ -374,12 +507,237 @@ function NotesPanel({ experienceId, token }) {
           {saving ? <><Spinner /> Saving…</> : '+ Add Note'}
         </button>
       </form>
+         </div>
+  );
+}
+
+// ─── Attachments Panel ────────────────────────────────────────────────────────
+const REC_A = { IDLE: 'idle', RECORDING: 'recording', PREVIEW: 'preview' };
+
+function AttachmentsPanel({ experienceId, token }) {
+  const [attachments, setAttachments] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [file,        setFile]        = useState(null);
+  const [uploading,   setUploading]   = useState(false);
+  const [error,       setError]       = useState('');
+
+  // Recording state
+  const [recState,  setRecState]  = useState(REC_A.IDLE);
+  const [elapsed,   setElapsed]   = useState(0);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl,  setAudioUrl]  = useState('');
+  const [micError,  setMicError]  = useState('');
+  const mediaRecRef = useRef(null);
+  const chunksRef   = useRef([]);
+  const timerRef    = useRef(null);
+  const streamRef   = useRef(null);
+
+  useEffect(() => {
+    getAttachments(experienceId, token)
+      .then((d) => setAttachments(d.attachments || []))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [experienceId, token]);
+
+  useEffect(() => () => {
+    clearInterval(timerRef.current);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+  }, [audioUrl]);
+
+  const uploadFile = async (fileToUpload) => {
+    setUploading(true); setError('');
+    try {
+      const d = await addAttachment(experienceId, fileToUpload, token);
+      setAttachments((prev) => [...prev, d.attachment]);
+      setFile(null); setAudioBlob(null);
+      if (audioUrl) { URL.revokeObjectURL(audioUrl); setAudioUrl(''); }
+      setRecState(REC_A.IDLE); setElapsed(0);
+    } catch (err) { setError(err.message); }
+    finally { setUploading(false); }
+  };
+
+  const handleUploadFile  = () => { if (file)      uploadFile(file); };
+  const handleUploadAudio = () => {
+    if (!audioBlob) return;
+    const ext  = audioBlob.type.includes('mp4') ? 'm4a' : 'webm';
+    const blob = new File([audioBlob], `recording_${Date.now()}.${ext}`, { type: audioBlob.type });
+    uploadFile(blob);
+  };
+
+  const handleDelete = async (attachId) => {
+    try {
+      await deleteAttachment(experienceId, attachId, token);
+      setAttachments((prev) => prev.filter((a) => a.id !== attachId));
+    } catch (err) { setError(err.message); }
+  };
+
+  const startRecording = async () => {
+    setMicError(''); chunksRef.current = [];
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (err) {
+      setMicError(err.name === 'NotAllowedError'
+        ? 'Microphone access denied.' : `Mic error: ${err.message}`);
+      return;
+    }
+    streamRef.current = stream;
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+                   : MediaRecorder.isTypeSupported('audio/mp4')  ? 'audio/mp4' : '';
+    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    mediaRecRef.current = recorder;
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
+      const url  = URL.createObjectURL(blob);
+      setAudioBlob(blob); setAudioUrl(url); setRecState(REC_A.PREVIEW);
+      setFile(null);
+    };
+    recorder.start(250);
+    setElapsed(0); setRecState(REC_A.RECORDING);
+    timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+  };
+
+  const stopRecording = () => {
+    clearInterval(timerRef.current);
+    mediaRecRef.current?.stop();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+  };
+
+  const discardRecording = () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioBlob(null); setAudioUrl('');
+    setElapsed(0); setRecState(REC_A.IDLE);
+  };
+
+  return (
+    <div style={{ border: '2px dashed rgba(224,50,40,0.35)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{
+        padding: '0.625rem 0.875rem',
+        background: 'rgba(224,50,40,0.06)',
+        borderBottom: '1px solid rgba(224,50,40,0.18)',
+        display: 'flex', alignItems: 'center', gap: '0.5rem',
+      }}>
+        <span style={{ fontSize: '1rem' }}>📂</span>
+        <div>
+          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-1)' }}>Add More Files</p>
+          <p style={{ fontSize: '0.68rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>
+            Attach additional docs, audio, or recorded voice without replacing the original
+          </p>
+        </div>
+      </div>
+
+      <div style={{ padding: '0.75rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {(error || micError) && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--error)' }}>⚠ {error || micError}</p>
+        )}
+
+        {/* Existing attachments list */}
+        {!loading && attachments.map((a) => (
+          <div key={a.id} style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            padding: '0.45rem 0.75rem', background: 'var(--surface-2)',
+            borderRadius: 'var(--r-md)', border: '1px solid var(--border)',
+          }}>
+            <span style={{ fontSize: '0.85rem' }}>📎</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {a.original_name}
+              </p>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-3)' }}>
+                {formatFileSize(a.file_size_bytes)} · {formatDate(a.created_at)}
+              </p>
+            </div>
+            <a href={`${getAttachmentUrl(experienceId, a.id)}?token=${token}`} download={a.original_name}
+              style={{ fontSize: '0.75rem', color: 'var(--brand)', textDecoration: 'none', flexShrink: 0 }}>↓</a>
+            <button onClick={() => handleDelete(a.id)} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-3)', fontSize: '0.75rem', padding: '0 0.2rem', lineHeight: 1, flexShrink: 0,
+            }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--error)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-3)')}
+            >✕</button>
+          </div>
+        ))}
+
+        {/* ── Upload a file ── */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <label style={{
+            cursor: 'pointer', padding: '0.5rem 1rem',
+            borderRadius: 'var(--r-md)', fontSize: '0.82rem', fontWeight: 600,
+            background: 'rgba(224,50,40,0.10)', color: '#F04039',
+            border: '1px solid rgba(224,50,40,0.35)', flexShrink: 0,
+            display: 'flex', alignItems: 'center', gap: '0.35rem',
+          }}>
+            <span>＋</span>
+            {file ? file.name : 'Choose File to Add'}
+            <input type="file" hidden accept=".mp3,.wav,.m4a,.ogg,.webm,.pdf,.doc,.docx,.txt"
+              onChange={(e) => { setFile(e.target.files[0] || null); discardRecording(); }} />
+          </label>
+          {file && (
+            <button className="btn btn-primary btn-sm" onClick={handleUploadFile} disabled={uploading}>
+              {uploading ? <><Spinner /> Uploading…</> : '↑ Upload'}
+            </button>
+          )}
+          {file && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>✕</button>
+          )}
+        </div>
+
+        {/* ── OR: record audio ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {recState === REC_A.IDLE && (
+            <button onClick={startRecording} style={{
+              display: 'flex', alignItems: 'center', gap: '0.375rem',
+              padding: '0.5rem 1rem', borderRadius: 'var(--r-md)',
+              fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+              background: 'var(--surface-2)', color: 'var(--text-2)',
+              border: '1px solid var(--border)', transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'; e.currentTarget.style.color = '#ef4444'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+            >
+              <span style={{ fontSize: '0.9rem' }}>⏺</span> Record Audio
+            </button>
+          )}
+
+          {recState === REC_A.RECORDING && (
+            <>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--error)', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                ● {formatTime(elapsed)}
+              </span>
+              <button onClick={stopRecording} style={{
+                display: 'flex', alignItems: 'center', gap: '0.375rem',
+                padding: '0.5rem 1rem', borderRadius: 'var(--r-md)',
+                fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+                background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                border: '1px solid rgba(239,68,68,0.35)',
+              }}>
+                <span>⏹</span> Stop Recording
+              </button>
+            </>
+          )}
+
+          {recState === REC_A.PREVIEW && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
+              <audio src={audioUrl} controls style={{ width: '100%', borderRadius: '0.375rem' }} />
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary btn-sm" onClick={handleUploadAudio} disabled={uploading}>
+                  {uploading ? <><Spinner /> Uploading…</> : '↑ Attach Recording'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={discardRecording}>✕ Discard</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─── Edit + Replace-File Panel ────────────────────────────────────────────────
-function EditPanel({ experience, token, onSaved }) {
+function EditPanel({ experience, token, onSaved, experienceId }) {
   const [open,       setOpen]       = useState(false);
   const [title,      setTitle]      = useState(experience.title);
   const [allTags,    setAllTags]    = useState([]);
@@ -475,6 +833,12 @@ function EditPanel({ experience, token, onSaved }) {
           {/* Divider */}
           <div style={{ height: '1px', background: 'var(--border)' }} />
 
+          {/* Attachments */}
+          <AttachmentsPanel experienceId={experienceId || experience.id} token={token} />
+
+          {/* Divider */}
+          <div style={{ height: '1px', background: 'var(--border)' }} />
+
           {/* Replace File */}
           <div>
             <label className="field-label" style={{ display: 'block', marginBottom: '0.4rem' }}>
@@ -560,9 +924,7 @@ function ExperienceDetail({ experience, onBack, token, onRefresh }) {
       {/* File Viewer (only when file exists) */}
       {!experience.file_missing && experience.type === 'audio' && <AudioPlayer src={fileUrl} token={token} />}
       {!experience.file_missing && experience.type === 'pdf' && (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
-          <iframe src={`${fileUrl}?token=${token}`} style={{ width: '100%', height: '600px', border: 'none' }} title={experience.original_name} />
-        </div>
+        <PDFViewer src={fileUrl} token={token} />
       )}
       {!experience.file_missing && (experience.type === 'doc' || experience.type === 'txt') && (
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -660,13 +1022,15 @@ function ReviewContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const selectedId   = searchParams.get('id');
+  const showUploading = searchParams.get('uploading') === '1';
 
-  const [experiences, setExperiences] = useState([]);
-  const [detail,      setDetail]      = useState(null);
-  const [loading,     setLoading]     = useState(true);
-  const [detailLoad,  setDetailLoad]  = useState(false);
-  const [error,       setError]       = useState('');
-  const [tagFilter,   setTagFilter]   = useState(null); // tag id or null
+  const [experiences,    setExperiences]    = useState([]);
+  const [detail,         setDetail]         = useState(null);
+  const [loading,        setLoading]        = useState(true);
+  const [detailLoad,     setDetailLoad]     = useState(false);
+  const [error,          setError]          = useState('');
+  const [tagFilter,      setTagFilter]      = useState(null);
+  const [pendingUploads, setPendingUploads] = useState(getPendingCount);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -678,6 +1042,17 @@ function ReviewContent() {
   }, [getToken]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
+
+  // Subscribe to background upload queue — refresh list when uploads finish
+  useEffect(() => {
+    let prev = getPendingCount();
+    return subscribeUploads((count) => {
+      setPendingUploads(count);
+      // When count drops to 0 (all done), refresh the list so new items appear
+      if (count === 0 && prev > 0) fetchList();
+      prev = count;
+    });
+  }, [fetchList]);
 
   useEffect(() => {
     const numId = selectedId ? Number(selectedId) : null;
@@ -724,6 +1099,27 @@ function ReviewContent() {
           </div>
         )}
       </div>
+
+      {/* Background upload banner */}
+      {(showUploading || pendingUploads > 0) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.625rem',
+          padding: '0.75rem 1rem', marginBottom: '1rem',
+          background: 'rgba(224,50,40,0.07)', border: '1px solid rgba(224,50,40,0.22)',
+          borderRadius: 'var(--r-md)',
+        }}>
+          <Spinner dark />
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-1)', flex: 1 }}>
+            {pendingUploads > 0
+              ? `Uploading ${pendingUploads > 1 ? `${pendingUploads} files` : 'your file'} in the background — it will appear here when ready.`
+              : 'Processing your upload — refreshing shortly…'}
+          </span>
+          {pendingUploads === 0 && (
+            <button onClick={() => router.replace('/review', { scroll: false })}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '0.75rem' }}>✕</button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="alert-error" style={{ marginBottom: '1.25rem' }}>
