@@ -54,6 +54,22 @@ const run = async () => {
 
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
   await schemaClient.query(schema);
+  console.log('[Migrate] Schema applied.');
+
+  // Explicit Phase 5 safety-net — runs even if the schema batch hit an earlier error
+  await schemaClient.query(`
+    CREATE TABLE IF NOT EXISTS experience_attachments (
+      id               SERIAL PRIMARY KEY,
+      experience_id    INT          NOT NULL REFERENCES experiences(id) ON DELETE CASCADE,
+      original_name    VARCHAR(255) NOT NULL,
+      file_size_bytes  BIGINT       NOT NULL,
+      mime_type        VARCHAR(120) NULL,
+      file_data        BYTEA        NOT NULL,
+      uploaded_by      INT          NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      created_at       TIMESTAMPTZ  DEFAULT NOW()
+    )
+  `);
+  console.log('[Migrate] experience_attachments table ensured.');
   console.log('[Migrate] Migration complete.');
 
   // ── Step 3: Seed admin user ───────────────────────────────────────────────
