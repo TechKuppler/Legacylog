@@ -211,3 +211,24 @@ EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE 'Role constraint update: %', SQLERRM;
 END
 $$;
+
+-- Phase 6: Add Marathi language support + store AssemblyAI detected language
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  -- Drop the old language check constraint so we can widen it
+  FOR r IN
+    SELECT conname FROM pg_constraint
+    WHERE conrelid = 'experiences'::regclass AND contype = 'c' AND conname LIKE '%language%'
+  LOOP
+    EXECUTE format('ALTER TABLE experiences DROP CONSTRAINT %I', r.conname);
+  END LOOP;
+  ALTER TABLE experiences ADD CONSTRAINT experiences_language_check
+    CHECK (language IN ('en','hi','gu','mr','mixed'));
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Language constraint update: %', SQLERRM;
+END
+$$;
+
+ALTER TABLE transcription_jobs ADD COLUMN IF NOT EXISTS detected_language VARCHAR(10) NULL;

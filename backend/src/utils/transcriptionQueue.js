@@ -31,8 +31,10 @@ async function uploadAudio(fileBuffer) {
 
 // ─── Submit transcription job ─────────────────────────────────────────────────
 async function submitTranscription(audioUrl, languageHint) {
-  // For 'mixed' or 'gu' (Gujarati) let AssemblyAI auto-detect
-  const useDetection = !languageHint || languageHint === 'mixed' || languageHint === 'gu';
+  // For 'mixed', 'gu' (Gujarati), or 'mr' (Marathi) let AssemblyAI auto-detect —
+  // AssemblyAI's language_detection covers these regional languages best.
+  const useDetection = !languageHint || languageHint === 'mixed'
+                    || languageHint === 'gu' || languageHint === 'mr';
 
   const body = {
     audio_url:          audioUrl,
@@ -160,7 +162,8 @@ const processNext = async () => {
       throw new Error(result.error || 'AssemblyAI transcription error');
     }
 
-    const transcript  = result.text || '';
+    const transcript       = result.text || '';
+    const detectedLanguage = result.language_code || null;
     const chapters    = (result.chapters  || []).map((c) => ({
       gist:     c.gist,
       headline: c.headline,
@@ -193,6 +196,14 @@ const processNext = async () => {
         jobId,
       ]
     );
+
+    // Save detected language separately — safe to fail if column not yet in DB
+    if (detectedLanguage) {
+      await pool.query(
+        `UPDATE transcription_jobs SET detected_language=$1 WHERE id=$2`,
+        [detectedLanguage, jobId]
+      ).catch((e) => console.warn('[Queue] detected_language not saved (column missing?):', e.message));
+    }
 
     // Update experience duration
     if (duration) {

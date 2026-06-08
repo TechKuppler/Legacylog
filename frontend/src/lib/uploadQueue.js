@@ -11,7 +11,8 @@ function notify() {
 export function startUpload(promise) {
   _pending++;
   notify();
-  promise.finally(() => {
+  // .catch() prevents unhandled rejection if the upload fails (e.g. 403)
+  promise.catch(() => {}).finally(() => {
     _pending = Math.max(0, _pending - 1);
     notify();
   });

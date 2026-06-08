@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 
-const { requireAuth, requirePermission, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requirePermission, requireAnyPermission, requireAdmin } = require('../middleware/auth');
 const upload = require('../config/multer');
 
 const { login, logout, me, changePassword }                        = require('../controllers/authController');
@@ -53,15 +53,15 @@ router.delete('/tags/:id', requireAuth, requireAdmin, deleteTag);
 // ─── Experiences ──────────────────────────────────────────────────────────────
 router.get   ('/experiences',     requireAuth, listExperiences);
 router.get   ('/experiences/:id', requireAuth, getExperience);
-router.post  ('/experiences',     requireAuth, requirePermission('can_upload'), upload.single('file'), createExperience);
+router.post  ('/experiences',     requireAuth, requireAnyPermission('can_upload', 'can_record'), upload.single('file'), createExperience);
 router.patch ('/experiences/:id', requireAuth, updateExperience);
 router.delete('/experiences/:id', requireAuth, deleteExperience);
 router.get   ('/experiences/:id/file', requireAuth, streamFile);
-router.put   ('/experiences/:id/file', requireAuth, upload.single('file'), replaceFile);
+router.put   ('/experiences/:id/file', requireAuth, requirePermission('can_upload'), upload.single('file'), replaceFile);
 
 // ─── Experience Attachments ───────────────────────────────────────────────────
 router.get   ('/experiences/:id/attachments',                    requireAuth, listAttachments);
-router.post  ('/experiences/:id/attachments',                    requireAuth, upload.single('file'), addAttachment);
+router.post  ('/experiences/:id/attachments',                    requireAuth, requireAnyPermission('can_upload', 'can_record'), upload.single('file'), addAttachment);
 router.get   ('/experiences/:id/attachments/:attachId/file',     requireAuth, streamAttachment);
 router.delete('/experiences/:id/attachments/:attachId',          requireAuth, deleteAttachment);
 
@@ -71,7 +71,7 @@ router.post  ('/experiences/:id/notes',            requireAuth, addNote);
 router.delete('/experiences/:expId/notes/:noteId', requireAuth, deleteNote);
 
 // ─── Transcription ────────────────────────────────────────────────────────────
-router.get ('/transcription/:experienceId',       requireAuth, getTranscriptionStatus);
+router.get ('/transcription/:experienceId',       requireAuth, requirePermission('can_view_transcripts'), getTranscriptionStatus);
 router.post('/transcription/:experienceId/retry', requireAuth, retryTranscription);
 
 module.exports = router;

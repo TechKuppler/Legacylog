@@ -264,14 +264,16 @@ function Sidebar({ open, onClose }) {
           <button onClick={handleLogout} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
             padding: '0.45rem 0.75rem', borderRadius: '0.625rem',
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            fontSize: '0.78rem', color: 'var(--text-3)', transition: 'all 120ms ease', fontFamily: 'inherit',
+            background: 'rgba(217,74,68,0.06)',
+            border: '1px solid rgba(217,74,68,0.16)',
+            cursor: 'pointer',
+            fontSize: '0.78rem', color: '#D94A44', transition: 'all 120ms ease', fontFamily: 'inherit',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(217,74,68,0.08)'; e.currentTarget.style.color = '#D94A44'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(217,74,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(217,74,68,0.30)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(217,74,68,0.06)'; e.currentTarget.style.borderColor = 'rgba(217,74,68,0.16)'; }}
           >
             <LogOut size={14} style={{ flexShrink: 0 }} />
-            <span>Sign out</span>
+            <span style={{ fontWeight: 600 }}>Sign out</span>
           </button>
         </div>
       </aside>
