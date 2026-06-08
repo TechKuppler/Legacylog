@@ -70,6 +70,33 @@ const run = async () => {
     )
   `);
   console.log('[Migrate] experience_attachments table ensured.');
+
+  // Explicit Phase 6 safety-net — detected_language column + language constraint
+  await schemaClient.query(`
+    ALTER TABLE transcription_jobs ADD COLUMN IF NOT EXISTS detected_language VARCHAR(10) NULL
+  `);
+  console.log('[Migrate] detected_language column ensured.');
+
+  // Widen experiences.language CHECK to include 'mr' (Marathi) and 'mixed'
+  await schemaClient.query(`
+    DO $$
+    DECLARE r RECORD;
+    BEGIN
+      FOR r IN
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'experiences'::regclass AND contype = 'c' AND conname LIKE '%language%'
+      LOOP
+        EXECUTE format('ALTER TABLE experiences DROP CONSTRAINT %I', r.conname);
+      END LOOP;
+      ALTER TABLE experiences ADD CONSTRAINT experiences_language_check
+        CHECK (language IN ('en','hi','gu','mr','mixed'));
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'Language constraint update skipped: %', SQLERRM;
+    END
+    $$
+  `);
+  console.log('[Migrate] language constraint ensured.');
+
   console.log('[Migrate] Migration complete.');
 
   // ── Step 3: Seed admin user ───────────────────────────────────────────────

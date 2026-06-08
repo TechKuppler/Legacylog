@@ -81,6 +81,16 @@ const requirePermission = (flag) => (req, res, next) => {
   next();
 };
 
+// ─── requireAnyPermission (at least one flag must be true) ───────────────────
+const requireAnyPermission = (...flags) => (req, res, next) => {
+  if (req.user?.role === 'admin') return next();
+  const has = flags.some((f) => req.user?.permissions?.[f]);
+  if (!has) {
+    return res.status(403).json({ error: `Permission denied: ${flags.join(' or ')} required` });
+  }
+  next();
+};
+
 // ─── requireAdmin ─────────────────────────────────────────────────────────────
 const requireAdmin = (req, res, next) => {
   if (req.user?.role !== 'admin') {
@@ -89,4 +99,4 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { requireAuth, requirePermission, requireAdmin };
+module.exports = { requireAuth, requirePermission, requireAnyPermission, requireAdmin };

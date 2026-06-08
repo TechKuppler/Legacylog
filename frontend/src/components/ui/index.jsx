@@ -32,18 +32,25 @@ export function Spinner({ dark = false }) {
 }
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
-export function EmptyState({ icon, title, description }) {
+export function EmptyState({ icon, title, description, actionLabel, onAction }) {
   return (
     <div className="empty-state">
       <div className="empty-state-icon">{icon}</div>
       <p className="empty-state-title">{title}</p>
       {description && <p className="empty-state-desc">{description}</p>}
+      {actionLabel && onAction && (
+        <div className="empty-state-action">
+          <button className="btn btn-primary btn-sm" onClick={onAction}>
+            {actionLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Tag Picker ───────────────────────────────────────────────────────────────
-export function TagPicker({ allTags = [], selectedIds = [], onChange, onCreateTag }) {
+export function TagPicker({ allTags = [], selectedIds = [], onChange, onCreateTag, canCreateTags = true }) {
   const [customInput, setCustomInput] = useState('');
   const [creating,    setCreating]    = useState(false);
   const [createError, setCreateError] = useState('');
@@ -60,7 +67,12 @@ export function TagPicker({ allTags = [], selectedIds = [], onChange, onCreateTa
       onChange([...selectedIds, tag.id]);
       setCustomInput('');
     } catch (err) {
-      setCreateError(err.message);
+      const msg = err.message || '';
+      setCreateError(
+        msg.toLowerCase().includes('permission')
+          ? "Permission denied: You don't have access to create custom tags."
+          : msg
+      );
     } finally {
       setCreating(false);
     }
@@ -80,25 +92,30 @@ export function TagPicker({ allTags = [], selectedIds = [], onChange, onCreateTa
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <input
-          type="text" className="input"
-          placeholder="Add custom tag…"
-          value={customInput}
-          onChange={(e) => setCustomInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreate())}
-          maxLength={80}
-        />
-        <button
-          type="button" className="btn btn-secondary"
-          onClick={handleCreate}
-          disabled={creating || !customInput.trim()}
-          style={{ whiteSpace: 'nowrap' }}
-        >
-          {creating ? <Spinner /> : 'Add'}
-        </button>
-      </div>
-      {createError && <p style={{ fontSize: '0.75rem', color: 'var(--error)' }}>{createError}</p>}
+
+      {canCreateTags && (
+        <>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text" className="input"
+              placeholder="Add custom tag…"
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreate())}
+              maxLength={80}
+            />
+            <button
+              type="button" className="btn btn-secondary"
+              onClick={handleCreate}
+              disabled={creating || !customInput.trim()}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {creating ? <Spinner /> : 'Add'}
+            </button>
+          </div>
+          {createError && <p style={{ fontSize: '0.75rem', color: 'var(--error)' }}>{createError}</p>}
+        </>
+      )}
     </div>
   );
 }
@@ -106,10 +123,10 @@ export function TagPicker({ allTags = [], selectedIds = [], onChange, onCreateTa
 // ─── Language Selector ────────────────────────────────────────────────────────
 export function LanguageSelect({ value, onChange, disabled = false }) {
   const OPTIONS = [
-    { value: 'en',    label: 'English'              },
-    { value: 'hi',    label: 'Hindi'                },
-    { value: 'gu',    label: 'Gujarati'             },
-    { value: 'mixed', label: 'Mixed (Auto-detect)'  },
+    { value: 'en', label: 'English'  },
+    { value: 'hi', label: 'Hindi'    },
+    { value: 'gu', label: 'Gujarati' },
+    { value: 'mr', label: 'Marathi'  },
   ];
   return (
     <select className="select" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>

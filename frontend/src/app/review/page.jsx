@@ -9,7 +9,7 @@ import {
 } from '@/components/ui';
 import { apiGet, apiPost, apiPatch, downloadFile, getFileStreamUrl, getNotes, addNote, deleteNote, replaceExperienceFile, getAttachments, addAttachment, deleteAttachment, getAttachmentUrl } from '@/lib/api';
 import { subscribe as subscribeUploads, getPendingCount } from '@/lib/uploadQueue';
-import { useAuth } from '@/lib/AuthContext';
+import { useAuth, usePermissions } from '@/lib/AuthContext';
 
 // ─── Inline PDF Viewer (pdfjs-dist, mobile-friendly) ─────────────────────────
 function PDFViewer({ src, token }) {
@@ -244,8 +244,18 @@ function AssemblyReport({ job }) {
           }}>{t.label}</button>
         ))}
 
-        {/* Confidence + Duration badges */}
+        {/* Language + Confidence + Duration badges */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 1rem', flexShrink: 0 }}>
+          {job.detected_language && (
+            <span style={{
+              fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.03em',
+              padding: '0.15rem 0.5rem', borderRadius: '9999px',
+              background: 'rgba(224,50,40,0.10)', color: '#F04039',
+              border: '1px solid rgba(224,50,40,0.22)',
+            }}>
+              🌐 {{ en: 'English', hi: 'Hindi', gu: 'Gujarati', mr: 'Marathi' }[job.detected_language] || job.detected_language.toUpperCase()}
+            </span>
+          )}
           {job.confidence != null && (
             <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.03em' }}>
               {Math.round(job.confidence * 100)}% conf.
@@ -514,7 +524,7 @@ function NotesPanel({ experienceId, token }) {
 // ─── Attachments Panel ────────────────────────────────────────────────────────
 const REC_A = { IDLE: 'idle', RECORDING: 'recording', PREVIEW: 'preview' };
 
-function AttachmentsPanel({ experienceId, token }) {
+function AttachmentsPanel({ experienceId, token, canUpload, canRecord }) {
   const [attachments, setAttachments] = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [file,        setFile]        = useState(null);
@@ -662,82 +672,86 @@ function AttachmentsPanel({ experienceId, token }) {
         ))}
 
         {/* ── Upload a file ── */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{
-            cursor: 'pointer', padding: '0.5rem 1rem',
-            borderRadius: 'var(--r-md)', fontSize: '0.82rem', fontWeight: 600,
-            background: 'rgba(224,50,40,0.10)', color: '#F04039',
-            border: '1px solid rgba(224,50,40,0.35)', flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: '0.35rem',
-          }}>
-            <span>＋</span>
-            {file ? file.name : 'Choose File to Add'}
-            <input type="file" hidden accept=".mp3,.wav,.m4a,.ogg,.webm,.pdf,.doc,.docx,.txt"
-              onChange={(e) => { setFile(e.target.files[0] || null); discardRecording(); }} />
-          </label>
-          {file && (
-            <button className="btn btn-primary btn-sm" onClick={handleUploadFile} disabled={uploading}>
-              {uploading ? <><Spinner /> Uploading…</> : '↑ Upload'}
-            </button>
-          )}
-          {file && (
-            <button className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>✕</button>
-          )}
-        </div>
+        {canUpload && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <label style={{
+              cursor: 'pointer', padding: '0.5rem 1rem',
+              borderRadius: 'var(--r-md)', fontSize: '0.82rem', fontWeight: 600,
+              background: 'rgba(224,50,40,0.10)', color: '#F04039',
+              border: '1px solid rgba(224,50,40,0.35)', flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+            }}>
+              <span>＋</span>
+              {file ? file.name : 'Choose File to Add'}
+              <input type="file" hidden accept=".mp3,.wav,.m4a,.ogg,.webm,.pdf,.doc,.docx,.txt"
+                onChange={(e) => { setFile(e.target.files[0] || null); discardRecording(); }} />
+            </label>
+            {file && (
+              <button className="btn btn-primary btn-sm" onClick={handleUploadFile} disabled={uploading}>
+                {uploading ? <><Spinner /> Uploading…</> : '↑ Upload'}
+              </button>
+            )}
+            {file && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>✕</button>
+            )}
+          </div>
+        )}
 
         {/* ── OR: record audio ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {recState === REC_A.IDLE && (
-            <button onClick={startRecording} style={{
-              display: 'flex', alignItems: 'center', gap: '0.375rem',
-              padding: '0.5rem 1rem', borderRadius: 'var(--r-md)',
-              fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-              background: 'var(--surface-2)', color: 'var(--text-2)',
-              border: '1px solid var(--border)', transition: 'all 0.15s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'; e.currentTarget.style.color = '#ef4444'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
-            >
-              <span style={{ fontSize: '0.9rem' }}>⏺</span> Record Audio
-            </button>
-          )}
-
-          {recState === REC_A.RECORDING && (
-            <>
-              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--error)', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-                ● {formatTime(elapsed)}
-              </span>
-              <button onClick={stopRecording} style={{
+        {canRecord && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {recState === REC_A.IDLE && (
+              <button onClick={startRecording} style={{
                 display: 'flex', alignItems: 'center', gap: '0.375rem',
                 padding: '0.5rem 1rem', borderRadius: 'var(--r-md)',
                 fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-                background: 'rgba(239,68,68,0.12)', color: '#ef4444',
-                border: '1px solid rgba(239,68,68,0.35)',
-              }}>
-                <span>⏹</span> Stop Recording
+                background: 'var(--surface-2)', color: 'var(--text-2)',
+                border: '1px solid var(--border)', transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'; e.currentTarget.style.color = '#ef4444'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+              >
+                <span style={{ fontSize: '0.9rem' }}>⏺</span> Record Audio
               </button>
-            </>
-          )}
+            )}
 
-          {recState === REC_A.PREVIEW && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
-              <audio src={audioUrl} controls style={{ width: '100%', borderRadius: '0.375rem' }} />
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button className="btn btn-primary btn-sm" onClick={handleUploadAudio} disabled={uploading}>
-                  {uploading ? <><Spinner /> Uploading…</> : '↑ Attach Recording'}
+            {recState === REC_A.RECORDING && (
+              <>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--error)', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                  ● {formatTime(elapsed)}
+                </span>
+                <button onClick={stopRecording} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.375rem',
+                  padding: '0.5rem 1rem', borderRadius: 'var(--r-md)',
+                  fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+                  background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.35)',
+                }}>
+                  <span>⏹</span> Stop Recording
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={discardRecording}>✕ Discard</button>
+              </>
+            )}
+
+            {recState === REC_A.PREVIEW && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
+                <audio src={audioUrl} controls style={{ width: '100%', borderRadius: '0.375rem' }} />
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button className="btn btn-primary btn-sm" onClick={handleUploadAudio} disabled={uploading}>
+                    {uploading ? <><Spinner /> Uploading…</> : '↑ Attach Recording'}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={discardRecording}>✕ Discard</button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── Edit + Replace-File Panel ────────────────────────────────────────────────
-function EditPanel({ experience, token, onSaved, experienceId }) {
+function EditPanel({ experience, token, onSaved, experienceId, canUpload, canRecord }) {
   const [open,       setOpen]       = useState(false);
   const [title,      setTitle]      = useState(experience.title);
   const [allTags,    setAllTags]    = useState([]);
@@ -834,43 +848,45 @@ function EditPanel({ experience, token, onSaved, experienceId }) {
           <div style={{ height: '1px', background: 'var(--border)' }} />
 
           {/* Attachments */}
-          <AttachmentsPanel experienceId={experienceId || experience.id} token={token} />
-
-          {/* Divider */}
-          <div style={{ height: '1px', background: 'var(--border)' }} />
+          <AttachmentsPanel experienceId={experienceId || experience.id} token={token} canUpload={canUpload} canRecord={canRecord} />
 
           {/* Replace File */}
-          <div>
-            <label className="field-label" style={{ display: 'block', marginBottom: '0.4rem' }}>
-              {experience.file_missing ? '⚠ File missing — re-upload below' : 'Replace File'}
-            </label>
-            {experience.file_missing && (
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
-                The original file was removed from disk. Upload the file again to restore it.
-              </p>
-            )}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <label style={{
-                cursor: 'pointer', padding: '0.4rem 0.875rem',
-                border: `1px dashed ${experience.file_missing ? 'rgba(248,81,73,0.5)' : 'var(--border)'}`,
-                borderRadius: 'var(--r-md)', fontSize: '0.8rem',
-                color: experience.file_missing ? '#f85149' : 'var(--text-2)',
-                background: 'var(--surface-2)', flexShrink: 0,
-              }}>
-                {file ? `📎 ${file.name}` : '+ Choose file'}
-                <input type="file" hidden accept=".mp3,.wav,.m4a,.ogg,.webm,.pdf,.doc,.docx,.txt"
-                  onChange={(e) => setFile(e.target.files[0] || null)} />
-              </label>
-              {file && (
-                <button className="btn btn-primary btn-sm" onClick={handleReplaceFile} disabled={uploading}>
-                  {uploading ? <><Spinner /> Uploading…</> : '↑ Upload & Replace'}
-                </button>
-              )}
-              {file && (
-                <button className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>✕</button>
-              )}
-            </div>
-          </div>
+          {canUpload && (
+            <>
+              <div style={{ height: '1px', background: 'var(--border)' }} />
+              <div>
+                <label className="field-label" style={{ display: 'block', marginBottom: '0.4rem' }}>
+                  {experience.file_missing ? '⚠ File missing — re-upload below' : 'Replace File'}
+                </label>
+                {experience.file_missing && (
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+                    The original file was removed from disk. Upload the file again to restore it.
+                  </p>
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <label style={{
+                    cursor: 'pointer', padding: '0.4rem 0.875rem',
+                    border: `1px dashed ${experience.file_missing ? 'rgba(248,81,73,0.5)' : 'var(--border)'}`,
+                    borderRadius: 'var(--r-md)', fontSize: '0.8rem',
+                    color: experience.file_missing ? '#f85149' : 'var(--text-2)',
+                    background: 'var(--surface-2)', flexShrink: 0,
+                  }}>
+                    {file ? `📎 ${file.name}` : '+ Choose file'}
+                    <input type="file" hidden accept=".mp3,.wav,.m4a,.ogg,.webm,.pdf,.doc,.docx,.txt"
+                      onChange={(e) => setFile(e.target.files[0] || null)} />
+                  </label>
+                  {file && (
+                    <button className="btn btn-primary btn-sm" onClick={handleReplaceFile} disabled={uploading}>
+                      {uploading ? <><Spinner /> Uploading…</> : '↑ Upload & Replace'}
+                    </button>
+                  )}
+                  {file && (
+                    <button className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>✕</button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -878,7 +894,7 @@ function EditPanel({ experience, token, onSaved, experienceId }) {
 }
 
 // ─── Detail View ──────────────────────────────────────────────────────────────
-function ExperienceDetail({ experience, onBack, token, onRefresh }) {
+function ExperienceDetail({ experience, onBack, token, onRefresh, canDownload, canViewTranscripts, canUpload, canRecord }) {
   const fileUrl = getFileStreamUrl(experience.id);
   const handleDownload = async () => {
     try { await downloadFile(`/experiences/${experience.id}/file`, experience.original_name, token); }
@@ -936,30 +952,31 @@ function ExperienceDetail({ experience, onBack, token, onRefresh }) {
         </div>
       )}
 
-      {!experience.file_missing && (
+      {!experience.file_missing && canDownload && (
         <button className="btn btn-ghost btn-sm" onClick={handleDownload} style={{ alignSelf: 'flex-start' }}>
           ↓ Download {experience.original_name}
         </button>
       )}
 
       {/* Edit / Add Content panel */}
-      <EditPanel experience={experience} token={token} onSaved={onRefresh} />
+      <EditPanel experience={experience} token={token} onSaved={onRefresh} canUpload={canUpload} canRecord={canRecord} />
 
       {/* Report (audio only) */}
-      {experience.type === 'audio' && (
+      {experience.type === 'audio' && canViewTranscripts && (
         <TranscriptPanel
           experienceId={experience.id}
           initialJob={{
-            status:         experience.transcription_status,
-            transcript:     experience.transcript,
-            summary:        experience.summary,
-            chapters:       experience.chapters,
-            key_phrases:    experience.key_phrases,
-            entities:       experience.entities,
-            sentiment:      experience.sentiment,
-            confidence:     experience.confidence,
-            audio_duration: experience.audio_duration,
-            error_message:  experience.error_message,
+            status:            experience.transcription_status,
+            transcript:        experience.transcript,
+            summary:           experience.summary,
+            chapters:          experience.chapters,
+            key_phrases:       experience.key_phrases,
+            entities:          experience.entities,
+            sentiment:         experience.sentiment,
+            confidence:        experience.confidence,
+            audio_duration:    experience.audio_duration,
+            detected_language: experience.detected_language,
+            error_message:     experience.error_message,
           }}
           token={token}
         />
@@ -1018,7 +1035,8 @@ export default function ReviewPage() {
 }
 
 function ReviewContent() {
-  const { getToken } = useAuth();
+  const { getToken }       = useAuth();
+  const { isAdmin, can }   = usePermissions();
   const searchParams = useSearchParams();
   const router       = useRouter();
   const selectedId   = searchParams.get('id');
@@ -1158,6 +1176,10 @@ function ReviewContent() {
           onBack={handleBack}
           token={getToken()}
           onRefresh={() => handleSelect(detail.id)}
+          canDownload={isAdmin || can('can_download_files')}
+          canViewTranscripts={isAdmin || can('can_view_transcripts')}
+          canUpload={isAdmin || can('can_upload')}
+          canRecord={isAdmin || can('can_record')}
         />
       )}
 
